@@ -1,5 +1,9 @@
 cd C:\Users\Admin\Navigate-Yourself\navigate-yourself-app
 npm start
+npm install
 http://localhost:3000/
+
+git add .
+git commit -m
 
 Ctrl + C --> stop npm
