@@ -1,0 +1,5 @@
+cd C:\Users\Admin\Navigate-Yourself\navigate-yourself-app
+npm start
+http://localhost:3000/
+
+Ctrl + C --> stop npm
