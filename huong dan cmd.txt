@@ -1,4 +1,5 @@
-cd C:\Users\Admin\Navigate-Yourself\navigate-yourself-app
+cd C:\Users\Admin\Navigate-Yourself
+npm install xlsx
 npm start
 npm install
 http://localhost:3000/

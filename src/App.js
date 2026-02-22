@@ -1,3 +1,4 @@
+import * as XLSX from 'xlsx'; 
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
@@ -124,6 +125,52 @@ function App() {
     const nextTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
     const nextQ = getAdaptiveQuestion(nextTopic, newMastery[nextTopic], []);
     setCurrentQuestion(nextQ);
+  };
+
+// Hàm xuất dữ liệu ra file Excel (.xlsx)
+  const exportToExcel = () => {
+    if (interactionLogs.length === 0) {
+      alert("Chưa có dữ liệu tương tác để xuất!");
+      return;
+    }
+
+    // 1. Chuẩn bị & định dạng dữ liệu
+    const exportData = interactionLogs.map((log, index) => ({
+      "STT": interactionLogs.length - index,
+      "Email Học Viên": log.student,
+      "Chủ đề": log.topic,
+      "Cấp độ": log.level,
+      "Mã Câu Hỏi": log.questionId,
+      "Kết Quả": log.isCorrect ? "ĐÚNG" : "SAI",
+      "P(L) Trước": parseFloat((log.pL_before * 100).toFixed(2)) + "%",
+      "P(L) Sau": parseFloat((log.pL_after * 100).toFixed(2)) + "%",
+      "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
+    }));
+
+    // 2. Tạo Worksheet từ dữ liệu
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+    // Tự động căn chỉnh độ rộng cột cho đẹp
+    const wscols = [
+      { wch: 5 },  // STT
+      { wch: 25 }, // Email
+      { wch: 20 }, // Chủ đề
+      { wch: 15 }, // Cấp độ
+      { wch: 15 }, // Mã CH
+      { wch: 10 }, // Kết quả
+      { wch: 12 }, // P(L) Trước
+      { wch: 12 }, // P(L) Sau
+      { wch: 20 }  // Thời gian
+    ];
+    worksheet['!cols'] = wscols;
+
+    // 3. Tạo Workbook và thêm Worksheet vào
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuBKT");
+
+    // 4. Tải file xuống máy tính
+    const fileName = `BKT_Logs_${user.email.split('@')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
   };
 
   // UI Đăng nhập
@@ -255,7 +302,52 @@ function App() {
 
           {/* Bảng Logs */}
           <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', flexGrow: 1 }}>
-            <h3 style={{ margin: '0 0 15px 0', color: '#2d3436', fontSize: '16px' }}>Lịch sử tương tác</h3>
+            {/* Bảng Logs */}
+          <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', flexGrow: 1 }}>
+            
+            {/* Tiêu đề và Nút xuất Excel */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Lịch sử tương tác</h3>
+              <button 
+                onClick={exportToExcel} 
+                style={{ padding: '6px 15px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#059669'}
+                onMouseOut={e => e.currentTarget.style.background = '#10b981'}
+              >
+                📥 Xuất Excel
+              </button>
+            </div>
+
+            <div className="custom-scrollbar" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+                  <tr style={{ color: '#a4b0be', textAlign: 'left' }}>
+                    <th style={{padding: '10px 5px', borderBottom: '2px solid #f1f2f6'}}>Câu</th>
+                    <th style={{padding: '10px 5px', borderBottom: '2px solid #f1f2f6'}}>Chủ đề</th>
+                    <th style={{padding: '10px 5px', borderBottom: '2px solid #f1f2f6'}}>Kết quả</th>
+                    <th style={{padding: '10px 5px', borderBottom: '2px solid #f1f2f6'}}>P(L) Sau</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interactionLogs.map((log, i) => (
+                    <tr key={log.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{padding: '12px 5px', color: '#636e72'}}>#{interactionLogs.length - i}</td>
+                      <td style={{padding: '12px 5px'}}>
+                        <span style={{background: `${TOPIC_COLORS[log.topic]}15`, color: TOPIC_COLORS[log.topic], padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>{log.topic}</span>
+                      </td>
+                      <td style={{padding: '12px 5px'}}>
+                        {log.isCorrect 
+                          ? <span style={{background: '#e0fbf1', color: '#00b894', padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold'}}>ĐÚNG</span>
+                          : <span style={{background: '#ffeaa7', color: '#d63031', padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold'}}>SAI</span>
+                        }
+                      </td>
+                      <td style={{padding: '12px 5px', fontWeight: 'bold', color: '#2d3436'}}>{(log.pL_after * 100).toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
             <div className="custom-scrollbar" style={{ maxHeight: '250px', overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
