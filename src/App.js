@@ -328,7 +328,7 @@ function App() {
               onClick={() => setShowChart(!showChart)} 
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}
             >
-              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị tinh thông (P(L))</h3>
+              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị xác suất làm chủ Kiến thức</h3>
               <span style={{ fontSize: '13px', color: '#6c5ce7', fontWeight: 'bold', background: '#f0f0ff', padding: '5px 12px', borderRadius: '15px' }}>
                 {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
               </span>
