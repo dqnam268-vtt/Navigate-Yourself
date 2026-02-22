@@ -10,6 +10,9 @@ import { updateBKT } from './logic/bktEngine';
 import { getAdaptiveQuestion } from './logic/AdaptiveQuestionSelector';
 import { uploadAllQuestions } from './utils/bulkUpload';
 
+// IMPORT THÊM FILE GIẢI THÍCH VÀO GIAO DIỆN
+import { explanations } from './data/explanations';
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -107,7 +110,13 @@ function App() {
 
         const randomTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
         const nextQ = getAdaptiveQuestion(randomTopic, currentMastery[randomTopic], []);
-        setCurrentQuestion(nextQ);
+        
+        // GHÉP LỜI GIẢI THÍCH VÀO CÂU HỎI KHI VỪA ĐĂNG NHẬP
+        setCurrentQuestion({
+          ...nextQ,
+          explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
+        });
+
       } else {
         setUser(null);
       }
@@ -154,21 +163,22 @@ function App() {
     setSelectedOption(null);
     setIsCorrectAnswer(null);
     setIsWaitingNext(false);
-    setCurrentQuestion(nextQ);
+    
+    // GHÉP LỜI GIẢI THÍCH VÀO CÂU HỎI TIẾP THEO
+    setCurrentQuestion({
+      ...nextQ,
+      explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
+    });
   };
 
-  // --- HÀM XÓA 1 HỌC SINH CÓ MẬT KHẨU ---
   const handleDeleteStudentData = async () => {
     if (!viewingStudent) return;
-
-    // Yêu cầu mật khẩu
     const passwordInput = window.prompt(`🔒 BẢO MẬT: Nhập mật khẩu giáo viên để xóa dữ liệu của ${viewingStudent}:`);
-    if (passwordInput !== "namy241222") {
-      if (passwordInput !== null) alert("❌ Sai mật khẩu! Bạn không có quyền xóa dữ liệu.");
+    if (passwordInput !== "namy") {
+      if (passwordInput !== null) alert("❌ Sai mật khẩu!");
       return;
     }
-
-    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài và biểu đồ của: ${viewingStudent}?`);
+    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử của: ${viewingStudent}?`);
     if (!confirmDelete) return;
 
     try {
@@ -188,26 +198,17 @@ function App() {
       } else {
         setViewingStudent(user.email);
       }
-    } catch (err) {
-      console.error("Lỗi xóa dữ liệu:", err);
-      alert("❌ Có lỗi xảy ra khi xóa dữ liệu!");
-    }
+    } catch (err) { alert("❌ Có lỗi xảy ra!"); }
   };
 
-  // --- HÀM XÓA TẤT CẢ CÓ MẬT KHẨU ---
   const handleDeleteAllData = async () => {
-    // Yêu cầu mật khẩu
     const passwordInput = window.prompt("🚨 NGUY HIỂM: Nhập mật khẩu giáo viên để XÓA SẠCH TOÀN BỘ hệ thống:");
     if (passwordInput !== "namy") {
-      if (passwordInput !== null) alert("❌ Sai mật khẩu! Thao tác bị hủy bỏ.");
+      if (passwordInput !== null) alert("❌ Sai mật khẩu!");
       return;
     }
-
-    const confirm1 = window.confirm("Thao tác này sẽ XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Thầy có chắc chắn không?");
+    const confirm1 = window.confirm("XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Tiếp tục?");
     if (!confirm1) return;
-
-    const confirm2 = window.confirm("Xác nhận cuối: Dữ liệu đã xóa sẽ KHÔNG THỂ khôi phục lại được. Tiến hành xóa?");
-    if (!confirm2) return;
 
     try {
       const masterySnap = await getDocs(collection(db, "mastery"));
@@ -218,22 +219,18 @@ function App() {
       
       await Promise.all([...masteryDeletes, ...logsDeletes]);
 
-      alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống! Sẵn sàng cho đợt thực nghiệm mới.");
-      
+      alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống!");
       setAllStudents([user.email]);
       setViewingStudent(user.email);
       setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
       setInteractionLogs([]);
       setChartData([]);
-    } catch (err) {
-      console.error("Lỗi xóa tất cả dữ liệu:", err);
-      alert("❌ Có lỗi xảy ra khi xóa dữ liệu!");
-    }
+    } catch (err) { alert("❌ Có lỗi xảy ra!"); }
   };
 
   const exportToExcel = () => {
     if (interactionLogs.length === 0) {
-      alert("Chưa có dữ liệu tương tác để xuất!");
+      alert("Chưa có dữ liệu để xuất!");
       return;
     }
     const exportData = interactionLogs.map((log, index) => ({
@@ -258,7 +255,7 @@ function App() {
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', padding: '20px' }}>
       <div style={{ background: '#fff', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
         <div style={{ width: '60px', height: '60px', background: '#6c5ce7', color: '#fff', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 20px', fontWeight: 'bold' }}>BKT</div>
-        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Navigate Yourself</h2>
+        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Linguistics Research</h2>
         <p style={{ color: '#636e72', fontSize: '14px', marginBottom: '30px' }}>Hệ thống học tập thích ứng</p>
         
         <input type="email" placeholder="Email học viên" onChange={e => setEmail(e.target.value)} style={{width: '100%', boxSizing: 'border-box', padding: '14px', marginBottom: '15px', borderRadius: '10px', border: '1px solid #dfe6e9', outline: 'none', fontSize: '15px'}} />
@@ -268,7 +265,7 @@ function App() {
         
         <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px dashed #b2bec3'}}>
           <p style={{fontSize: '12px', color: '#b2bec3', marginBottom: '10px'}}>Dành cho Giáo viên / Admin:</p>
-          <button onClick={uploadAllQuestions} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 500 câu ngân hàng</button>
+          <button onClick={uploadAllQuestions} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 600 câu ngân hàng</button>
         </div>
       </div>
     </div>
@@ -278,7 +275,6 @@ function App() {
 
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-      
       <style>{`
         .option-btn { transition: all 0.2s ease; border: 2px solid transparent; }
         .option-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: ${currentColor}; background: #fdfdfd !important; }
@@ -306,7 +302,6 @@ function App() {
 
       <div className="main-layout" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
         
-        {/* 1. KHUNG CHỌN HỌC SINH VÀ XÓA DỮ LIỆU */}
         <div style={{ background: '#e0fbf1', padding: '20px 25px', borderRadius: '20px', border: '1px solid #00b894', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#00b894' }}>👨‍🏫 CHẾ ĐỘ GIÁO VIÊN: Xem tiến độ học sinh</span>
           <select 
@@ -322,23 +317,15 @@ function App() {
           </select>
           
           <div style={{ display: 'flex', gap: '15px' }}>
-            <button 
-              onClick={handleDeleteStudentData}
-              disabled={!viewingStudent}
-              style={{ padding: '10px', background: '#ff7675', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1, opacity: !viewingStudent ? 0.5 : 1 }}
-            >
+            <button onClick={handleDeleteStudentData} disabled={!viewingStudent} style={{ padding: '10px', background: '#ff7675', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1, opacity: !viewingStudent ? 0.5 : 1 }}>
               🗑️ Xóa học sinh này
             </button>
-            <button 
-              onClick={handleDeleteAllData}
-              style={{ padding: '10px', background: '#d63031', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}
-            >
+            <button onClick={handleDeleteAllData} style={{ padding: '10px', background: '#d63031', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}>
               🚨 Xóa TẤT CẢ dữ liệu
             </button>
           </div>
         </div>
 
-        {/* 2. KHUNG CÂU HỎI */}
         <div style={{ background: '#fff', padding: '30px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)' }}>
           {currentQuestion ? (
             <>
@@ -399,6 +386,7 @@ function App() {
                     </p>
                   )}
 
+                  {/* CHỖ NÀY SẼ HIỂN THỊ LỜI GIẢI THÍCH */}
                   {currentQuestion.explanation && (
                     <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#636e72', fontStyle: 'italic', lineHeight: '1.6' }}>
                       💡 Giải thích: {currentQuestion.explanation}
@@ -422,7 +410,6 @@ function App() {
           )}
         </div>
 
-        {/* 3. BIỂU ĐỒ */}
         <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
           <div onClick={() => setShowChart(!showChart)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}>
             <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị xác suất làm chủ Kiến thức</h3>
@@ -449,14 +436,10 @@ function App() {
           )}
         </div>
 
-        {/* 4. LỊCH SỬ TƯƠNG TÁC */}
         <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', marginBottom: '40px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Lịch sử tương tác</h3>
-            <button 
-              onClick={exportToExcel} 
-              style={{ padding: '8px 18px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s' }}
-            >
+            <button onClick={exportToExcel} style={{ padding: '8px 18px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s' }}>
               📥 Xuất Excel
             </button>
           </div>
