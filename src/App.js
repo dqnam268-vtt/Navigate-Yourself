@@ -157,9 +157,18 @@ function App() {
     setCurrentQuestion(nextQ);
   };
 
+  // --- HÀM XÓA 1 HỌC SINH CÓ MẬT KHẨU ---
   const handleDeleteStudentData = async () => {
     if (!viewingStudent) return;
-    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài và biểu đồ của học sinh: ${viewingStudent}?`);
+
+    // Yêu cầu mật khẩu
+    const passwordInput = window.prompt(`🔒 BẢO MẬT: Nhập mật khẩu giáo viên để xóa dữ liệu của ${viewingStudent}:`);
+    if (passwordInput !== "namy") {
+      if (passwordInput !== null) alert("❌ Sai mật khẩu! Bạn không có quyền xóa dữ liệu.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài và biểu đồ của: ${viewingStudent}?`);
     if (!confirmDelete) return;
 
     try {
@@ -185,11 +194,19 @@ function App() {
     }
   };
 
+  // --- HÀM XÓA TẤT CẢ CÓ MẬT KHẨU ---
   const handleDeleteAllData = async () => {
-    const confirm1 = window.confirm("🚨 NGUY HIỂM: Thao tác này sẽ XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Thầy có chắc chắn không?");
+    // Yêu cầu mật khẩu
+    const passwordInput = window.prompt("🚨 NGUY HIỂM: Nhập mật khẩu giáo viên để XÓA SẠCH TOÀN BỘ hệ thống:");
+    if (passwordInput !== "namy") {
+      if (passwordInput !== null) alert("❌ Sai mật khẩu! Thao tác bị hủy bỏ.");
+      return;
+    }
+
+    const confirm1 = window.confirm("Thao tác này sẽ XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Thầy có chắc chắn không?");
     if (!confirm1) return;
 
-    const confirm2 = window.confirm("Thầy có thực sự muốn xóa hết không? Dữ liệu đã xóa sẽ KHÔNG THỂ khôi phục lại được!");
+    const confirm2 = window.confirm("Xác nhận cuối: Dữ liệu đã xóa sẽ KHÔNG THỂ khôi phục lại được. Tiến hành xóa?");
     if (!confirm2) return;
 
     try {
@@ -201,7 +218,7 @@ function App() {
       
       await Promise.all([...masteryDeletes, ...logsDeletes]);
 
-      alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống! Sẵn sàng cho thực nghiệm mới.");
+      alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống! Sẵn sàng cho đợt thực nghiệm mới.");
       
       setAllStudents([user.email]);
       setViewingStudent(user.email);
@@ -276,7 +293,6 @@ function App() {
         }
       `}</style>
 
-      {/* HEADER: Chiều rộng tối đa 800px cho vừa với 1 cột */}
       <header className="app-header" style={{ maxWidth: '800px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px 30px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
         <div className="header-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', color: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' }}>N</div>
@@ -288,7 +304,6 @@ function App() {
         <button className="logout-btn" onClick={() => signOut(auth)} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #dfe6e9', background: '#fff', color: '#636e72', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>Đăng xuất</button>
       </header>
 
-      {/* MAIN LAYOUT: Chuyển sang Flexbox 1 cột, giới hạn 800px căn giữa */}
       <div className="main-layout" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
         
         {/* 1. KHUNG CHỌN HỌC SINH VÀ XÓA DỮ LIỆU */}
