@@ -3,8 +3,8 @@ import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { 
   doc, getDoc, setDoc, addDoc, collection, 
-  serverTimestamp, query, where, orderBy, onSnapshot, getDocs 
-} from 'firebase/firestore';
+  serverTimestamp, query, where, orderBy, onSnapshot, getDocs, deleteDoc 
+} from 'firebase/firestore'; // Bổ sung thêm deleteDoc
 
 import { updateBKT } from './logic/bktEngine';
 import { getAdaptiveQuestion } from './logic/AdaptiveQuestionSelector';
@@ -41,7 +41,6 @@ function App() {
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
   const [isWaitingNext, setIsWaitingNext] = useState(false);
 
-  // --- CÁC STATE MỚI CHO CHẾ ĐỘ GIÁO VIÊN ---
   const [allStudents, setAllStudents] = useState([]);
   const [viewingStudent, setViewingStudent] = useState("");
 
@@ -52,10 +51,9 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [interactionLogs, setInteractionLogs] = useState([]);
 
-  // Lấy danh sách toàn bộ học sinh khi đăng nhập
   useEffect(() => {
     if (user) {
-      setViewingStudent(user.email); // Mặc định xem biểu đồ của chính mình
+      setViewingStudent(user.email);
       const fetchStudents = async () => {
         const snap = await getDocs(collection(db, "mastery"));
         const studentEmails = snap.docs.map(doc => doc.id);
@@ -65,7 +63,6 @@ function App() {
     }
   }, [user]);
 
-  // Lắng nghe dữ liệu Logs dựa trên người đang được chọn (viewingStudent)
   useEffect(() => {
     if (!viewingStudent) return;
     const q = query(
@@ -93,7 +90,7 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [viewingStudent]); // Chạy lại mỗi khi thầy chọn học sinh khác
+  }, [viewingStudent]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -158,6 +155,70 @@ function App() {
     setIsCorrectAnswer(null);
     setIsWaitingNext(false);
     setCurrentQuestion(nextQ);
+  };
+
+  // ==========================================
+  // CÁC HÀM XÓA DỮ LIỆU
+  // ==========================================
+  
+  // 1. Hàm xóa 1 học sinh
+  const handleDeleteStudentData = async () => {
+    if (!viewingStudent) return;
+    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử làm bài và biểu đồ của học sinh: ${viewingStudent}?`);
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(db, "mastery", viewingStudent)); // Xóa điểm
+      const q = query(collection(db, "learning_logs"), where("student", "==", viewingStudent));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id)));
+      await Promise.all(deletePromises); // Xóa logs
+
+      alert(`✅ Đã xóa sạch dữ liệu của ${viewingStudent}`);
+      
+      // Làm mới giao diện
+      setAllStudents(prev => prev.filter(email => email !== viewingStudent));
+      if (viewingStudent === user.email) {
+        setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
+        setInteractionLogs([]);
+        setChartData([]);
+      } else {
+        setViewingStudent(user.email);
+      }
+    } catch (err) {
+      console.error("Lỗi xóa dữ liệu:", err);
+      alert("❌ Có lỗi xảy ra khi xóa dữ liệu!");
+    }
+  };
+
+  // 2. Hàm xóa tất cả học sinh (Reset hệ thống)
+  const handleDeleteAllData = async () => {
+    const confirm1 = window.confirm("🚨 NGUY HIỂM: Thao tác này sẽ XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Thầy có chắc chắn không?");
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm("Thầy có thực sự muốn xóa hết không? Dữ liệu đã xóa sẽ KHÔNG THỂ khôi phục lại được!");
+    if (!confirm2) return;
+
+    try {
+      const masterySnap = await getDocs(collection(db, "mastery"));
+      const masteryDeletes = masterySnap.docs.map(document => deleteDoc(doc(db, "mastery", document.id)));
+      
+      const logsSnap = await getDocs(collection(db, "learning_logs"));
+      const logsDeletes = logsSnap.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id)));
+      
+      await Promise.all([...masteryDeletes, ...logsDeletes]);
+
+      alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống! Sẵn sàng cho thực nghiệm mới.");
+      
+      setAllStudents([user.email]);
+      setViewingStudent(user.email);
+      setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
+      setInteractionLogs([]);
+      setChartData([]);
+    } catch (err) {
+      console.error("Lỗi xóa tất cả dữ liệu:", err);
+      alert("❌ Có lỗi xảy ra khi xóa dữ liệu!");
+    }
   };
 
   const exportToExcel = () => {
@@ -320,13 +381,13 @@ function App() {
         {/* CỘT PHẢI: BIỂU ĐỒ & LOGS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* KHUNG CHỌN HỌC SINH (CHẾ ĐỘ GIÁO VIÊN) */}
+          {/* KHUNG CHỌN HỌC SINH VÀ XÓA DỮ LIỆU */}
           <div style={{ background: '#e0fbf1', padding: '15px 25px', borderRadius: '20px', border: '1px solid #00b894', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#00b894' }}>👨‍🏫 CHẾ ĐỘ GIÁO VIÊN: Xem tiến độ học sinh</span>
             <select 
               value={viewingStudent} 
               onChange={(e) => setViewingStudent(e.target.value)}
-              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #00b894', outline: 'none', width: '100%', cursor: 'pointer' }}
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #00b894', outline: 'none', width: '100%', cursor: 'pointer', marginBottom: '5px' }}
             >
               {allStudents.map(email => (
                 <option key={email} value={email}>
@@ -334,11 +395,28 @@ function App() {
                 </option>
               ))}
             </select>
+            
+            {/* HAI NÚT XÓA */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={handleDeleteStudentData}
+                disabled={!viewingStudent}
+                style={{ padding: '8px 10px', background: '#ff7675', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', flex: 1, opacity: !viewingStudent ? 0.5 : 1 }}
+              >
+                🗑️ Xóa học sinh này
+              </button>
+              <button 
+                onClick={handleDeleteAllData}
+                style={{ padding: '8px 10px', background: '#d63031', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}
+              >
+                🚨 Xóa TẤT CẢ dữ liệu
+              </button>
+            </div>
           </div>
 
           <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
             <div onClick={() => setShowChart(!showChart)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}>
-              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị mức độ thành thạo</h3>
+              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị xác suất làm chủ Kiến thức</h3>
               <span style={{ fontSize: '13px', color: '#6c5ce7', fontWeight: 'bold', background: '#f0f0ff', padding: '5px 12px', borderRadius: '15px' }}>
                 {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
               </span>
