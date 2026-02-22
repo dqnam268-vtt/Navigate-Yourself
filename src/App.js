@@ -10,7 +10,6 @@ import { updateBKT } from './logic/bktEngine';
 import { getAdaptiveQuestion } from './logic/AdaptiveQuestionSelector';
 import { uploadAllQuestions } from './utils/bulkUpload';
 
-// IMPORT THÊM FILE GIẢI THÍCH VÀO GIAO DIỆN
 import { explanations } from './data/explanations';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -111,7 +110,6 @@ function App() {
         const randomTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
         const nextQ = getAdaptiveQuestion(randomTopic, currentMastery[randomTopic], []);
         
-        // GHÉP LỜI GIẢI THÍCH VÀO CÂU HỎI KHI VỪA ĐĂNG NHẬP
         setCurrentQuestion({
           ...nextQ,
           explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
@@ -164,7 +162,6 @@ function App() {
     setIsCorrectAnswer(null);
     setIsWaitingNext(false);
     
-    // GHÉP LỜI GIẢI THÍCH VÀO CÂU HỎI TIẾP THEO
     setCurrentQuestion({
       ...nextQ,
       explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
@@ -251,11 +248,24 @@ function App() {
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
+  // --- HÀM BẢO MẬT CHO NÚT NẠP DỮ LIỆU TỪ ADMIN ---
+  const handleAdminUpload = () => {
+    const adminPassword = window.prompt("🔒 BẢO MẬT ADMIN: Nhập mật khẩu để nạp dữ liệu ngân hàng câu hỏi:");
+    if (adminPassword !== "namy241222") {
+      if (adminPassword !== null) {
+        alert("❌ Sai mật khẩu Admin! Từ chối truy cập.");
+      }
+      return;
+    }
+    // Nếu nhập đúng mật khẩu, gọi hàm nạp dữ liệu
+    uploadAllQuestions();
+  };
+
   if (!user) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', padding: '20px' }}>
       <div style={{ background: '#fff', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
         <div style={{ width: '60px', height: '60px', background: '#6c5ce7', color: '#fff', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 20px', fontWeight: 'bold' }}>BKT</div>
-        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Linguistics Research</h2>
+        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Navigate Yourself</h2>
         <p style={{ color: '#636e72', fontSize: '14px', marginBottom: '30px' }}>Hệ thống học tập thích ứng</p>
         
         <input type="email" placeholder="Email học viên" onChange={e => setEmail(e.target.value)} style={{width: '100%', boxSizing: 'border-box', padding: '14px', marginBottom: '15px', borderRadius: '10px', border: '1px solid #dfe6e9', outline: 'none', fontSize: '15px'}} />
@@ -265,7 +275,8 @@ function App() {
         
         <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px dashed #b2bec3'}}>
           <p style={{fontSize: '12px', color: '#b2bec3', marginBottom: '10px'}}>Dành cho Giáo viên / Admin:</p>
-          <button onClick={uploadAllQuestions} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 600 câu ngân hàng</button>
+          {/* NÚT ĐÃ ĐƯỢC GẮN HÀM KIỂM TRA MẬT KHẨU */}
+          <button onClick={handleAdminUpload} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 500 câu ngân hàng</button>
         </div>
       </div>
     </div>
@@ -386,7 +397,6 @@ function App() {
                     </p>
                   )}
 
-                  {/* CHỖ NÀY SẼ HIỂN THỊ LỜI GIẢI THÍCH */}
                   {currentQuestion.explanation && (
                     <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#636e72', fontStyle: 'italic', lineHeight: '1.6' }}>
                       💡 Giải thích: {currentQuestion.explanation}
