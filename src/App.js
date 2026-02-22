@@ -3,7 +3,7 @@ import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 import { 
   doc, getDoc, setDoc, addDoc, collection, 
-  serverTimestamp, query, where, orderBy, onSnapshot 
+  serverTimestamp, query, where, orderBy, onSnapshot, getDocs 
 } from 'firebase/firestore';
 
 import { updateBKT } from './logic/bktEngine';
@@ -37,10 +37,13 @@ function App() {
   
   const [showChart, setShowChart] = useState(true);
   
-  // Các state MỚI để xử lý giao diện trả lời
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
   const [isWaitingNext, setIsWaitingNext] = useState(false);
+
+  // --- CÁC STATE MỚI CHO CHẾ ĐỘ GIÁO VIÊN ---
+  const [allStudents, setAllStudents] = useState([]);
+  const [viewingStudent, setViewingStudent] = useState("");
 
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
@@ -49,12 +52,25 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [interactionLogs, setInteractionLogs] = useState([]);
 
-  // Lắng nghe dữ liệu
+  // Lấy danh sách toàn bộ học sinh khi đăng nhập
   useEffect(() => {
-    if (!user) return;
+    if (user) {
+      setViewingStudent(user.email); // Mặc định xem biểu đồ của chính mình
+      const fetchStudents = async () => {
+        const snap = await getDocs(collection(db, "mastery"));
+        const studentEmails = snap.docs.map(doc => doc.id);
+        setAllStudents(studentEmails);
+      };
+      fetchStudents();
+    }
+  }, [user]);
+
+  // Lắng nghe dữ liệu Logs dựa trên người đang được chọn (viewingStudent)
+  useEffect(() => {
+    if (!viewingStudent) return;
     const q = query(
       collection(db, "learning_logs"),
-      where("student", "==", user.email),
+      where("student", "==", viewingStudent),
       orderBy("timestamp", "asc")
     );
 
@@ -73,11 +89,11 @@ function App() {
       });
       setChartData(formattedData);
     }, (error) => {
-      console.error("Lỗi lấy dữ liệu Logs (Cần tạo Index trên Firestore): ", error);
+      console.error("Lỗi lấy dữ liệu Logs: ", error);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [viewingStudent]); // Chạy lại mỗi khi thầy chọn học sinh khác
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -102,14 +118,10 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // HÀM XỬ LÝ KHI CLICK ĐÁP ÁN
   const handleAnswer = async (opt) => {
-    // Ngăn chặn bấm nhiều lần
     if (!currentQuestion || !user || isWaitingNext) return;
     
     const isCorrect = opt.startsWith(currentQuestion.answer.charAt(0)); 
-    
-    // Cập nhật giao diện ngay lập tức
     setSelectedOption(opt);
     setIsCorrectAnswer(isCorrect);
     setIsWaitingNext(true);
@@ -138,19 +150,16 @@ function App() {
     } catch (e) { console.error("Lỗi lưu DB: ", e); }
   };
 
-  // HÀM CHUYỂN CÂU TIẾP THEO
   const handleNextQuestion = () => {
     const nextTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
     const nextQ = getAdaptiveQuestion(nextTopic, mastery[nextTopic], []);
     
-    // Đặt lại trạng thái giao diện
     setSelectedOption(null);
     setIsCorrectAnswer(null);
     setIsWaitingNext(false);
     setCurrentQuestion(nextQ);
   };
 
-  // Hàm xuất Excel
   const exportToExcel = () => {
     if (interactionLogs.length === 0) {
       alert("Chưa có dữ liệu tương tác để xuất!");
@@ -171,10 +180,9 @@ function App() {
     worksheet['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuBKT");
-    XLSX.writeFile(workbook, `BKT_Logs_${user.email.split('@')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
-  // UI Đăng nhập
   if (!user) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', padding: '20px' }}>
       <div style={{ background: '#fff', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
@@ -189,7 +197,7 @@ function App() {
         
         <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px dashed #b2bec3'}}>
           <p style={{fontSize: '12px', color: '#b2bec3', marginBottom: '10px'}}>Dành cho Giáo viên / Admin:</p>
-          <button onClick={uploadAllQuestions} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 500 câu ngân hàng</button>
+          <button onClick={uploadAllQuestions} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 600 câu ngân hàng</button>
         </div>
       </div>
     </div>
@@ -197,7 +205,6 @@ function App() {
 
   const currentColor = currentQuestion ? TOPIC_COLORS[currentQuestion.topic] : '#6c5ce7';
 
-  // UI Đã đăng nhập
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
       
@@ -209,20 +216,14 @@ function App() {
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        @media (max-width: 768px) {
-          .main-layout { grid-template-columns: 1fr !important; gap: 20px !important; }
-          .app-header { flex-direction: column; gap: 15px; text-align: center; padding: 20px !important; }
-          .header-info { flex-direction: column; }
-        }
       `}</style>
 
-      {/* HEADER */}
       <header className="app-header" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px 30px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
         <div className="header-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', color: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' }}>N</div>
           <div>
             <h2 style={{ margin: 0, color: '#2d3436', fontSize: '18px' }}>Navigate-Yourself BKT</h2>
-            <span style={{ color: '#636e72', fontSize: '13px' }}>Học viên: <strong>{user.email}</strong></span>
+            <span style={{ color: '#636e72', fontSize: '13px' }}>Học viên đang làm bài: <strong>{user.email}</strong></span>
           </div>
         </div>
         <button className="logout-btn" onClick={() => signOut(auth)} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #dfe6e9', background: '#fff', color: '#636e72', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>Đăng xuất</button>
@@ -250,7 +251,6 @@ function App() {
                     const isSelected = selectedOption === opt;
                     const isActualAnswer = opt.startsWith(currentQuestion.answer.charAt(0));
                     
-                    // Logic màu sắc khi đã chọn
                     let btnStyle = { textAlign: 'left', padding: '16px 20px', borderRadius: '12px', background: '#f8fafc', color: '#2d3436', fontSize: '15px', cursor: 'pointer', border: '2px solid transparent' };
                     
                     if (isWaitingNext) {
@@ -281,21 +281,18 @@ function App() {
                   })}
                 </div>
 
-                {/* KHUNG PHẢN HỒI VÀ NÚT TIẾP THEO */}
                 {isWaitingNext && (
                   <div style={{ marginTop: '25px', padding: '20px', borderRadius: '12px', background: isCorrectAnswer ? '#e0fbf1' : '#ffeaa7' }}>
                     <h4 style={{ margin: '0 0 10px 0', color: isCorrectAnswer ? '#00b894' : '#d63031', fontSize: '16px' }}>
                       {isCorrectAnswer ? '🎉 Hoàn toàn chính xác!' : '❌ Chưa chính xác!'}
                     </h4>
                     
-                    {/* Nếu sai, hiển thị đáp án đúng */}
                     {!isCorrectAnswer && (
                       <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#2d3436' }}>
                         Đáp án đúng là: <strong>{currentQuestion.answer}</strong>
                       </p>
                     )}
 
-                    {/* Hiển thị Giải thích (nếu có trong dữ liệu) */}
                     {currentQuestion.explanation && (
                       <p style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#636e72', fontStyle: 'italic', lineHeight: '1.5' }}>
                         💡 Giải thích: {currentQuestion.explanation}
@@ -323,12 +320,25 @@ function App() {
         {/* CỘT PHẢI: BIỂU ĐỒ & LOGS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
-            <div 
-              onClick={() => setShowChart(!showChart)} 
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}
+          {/* KHUNG CHỌN HỌC SINH (CHẾ ĐỘ GIÁO VIÊN) */}
+          <div style={{ background: '#e0fbf1', padding: '15px 25px', borderRadius: '20px', border: '1px solid #00b894', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#00b894' }}>👨‍🏫 CHẾ ĐỘ GIÁO VIÊN: Xem tiến độ học sinh</span>
+            <select 
+              value={viewingStudent} 
+              onChange={(e) => setViewingStudent(e.target.value)}
+              style={{ padding: '10px', borderRadius: '8px', border: '1px solid #00b894', outline: 'none', width: '100%', cursor: 'pointer' }}
             >
-              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị xác suất làm chủ Kiến thức</h3>
+              {allStudents.map(email => (
+                <option key={email} value={email}>
+                  {email === user.email ? `${email} (Chính tôi)` : email}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+            <div onClick={() => setShowChart(!showChart)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}>
+              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị mức độ thành thạo</h3>
               <span style={{ fontSize: '13px', color: '#6c5ce7', fontWeight: 'bold', background: '#f0f0ff', padding: '5px 12px', borderRadius: '15px' }}>
                 {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
               </span>
@@ -358,8 +368,6 @@ function App() {
               <button 
                 onClick={exportToExcel} 
                 style={{ padding: '6px 15px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s' }}
-                onMouseOver={e => e.currentTarget.style.background = '#059669'}
-                onMouseOut={e => e.currentTarget.style.background = '#10b981'}
               >
                 📥 Xuất Excel
               </button>
