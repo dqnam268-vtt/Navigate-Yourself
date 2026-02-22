@@ -1,34 +1,27 @@
 import { db } from "../firebase";
-// Bổ sung thêm getDocs, collection, và deleteDoc để xóa dữ liệu cũ
 import { doc, setDoc, getDocs, collection, deleteDoc } from "firebase/firestore";
 import { questionBank } from "../data/questionBank"; 
+import { explanations } from "../data/explanations"; // IMPORT FILE GIẢI THÍCH
 
 export const uploadAllQuestions = async () => {
-  // Đổi thông báo để cảnh báo người dùng về việc xóa dữ liệu
   const confirmAction = window.confirm(
-    `CẢNH BÁO: Thao tác này sẽ XÓA SẠCH toàn bộ câu hỏi cũ trên hệ thống và nạp lại ${questionBank.length} câu mới. Bạn có chắc chắn không?`
+    `CẢNH BÁO: Thao tác này sẽ xóa sạch dữ liệu cũ và nạp lại ${questionBank.length} câu mới KÈM GIẢI THÍCH. Tiếp tục?`
   );
   if (!confirmAction) return;
 
   console.log("Bắt đầu dọn dẹp dữ liệu cũ...");
   
   try {
-    // ==========================================
-    // BƯỚC 1: XÓA TOÀN BỘ CÂU HỎI CŨ
-    // ==========================================
+    // 1. XÓA SẠCH DỮ LIỆU CŨ (Giữ nguyên logic cũ)
     const querySnapshot = await getDocs(collection(db, "questions"));
     let deleteCount = 0;
-    
-    // Vòng lặp xóa từng document cũ
     for (const document of querySnapshot.docs) {
       await deleteDoc(doc(db, "questions", document.id));
       deleteCount++;
     }
-    console.log(`Đã xóa sạch ${deleteCount} câu hỏi cũ.`);
+    console.log(`Đã xóa ${deleteCount} câu cũ.`);
 
-    // ==========================================
-    // BƯỚC 2: NẠP NGÂN HÀNG CÂU HỎI MỚI
-    // ==========================================
+    // 2. NẠP DỮ LIỆU MỚI VÀ GHÉP NỐI GIẢI THÍCH
     console.log("Bắt đầu nạp dữ liệu mới...");
     let successCount = 0;
     let errorCount = 0;
@@ -36,24 +29,27 @@ export const uploadAllQuestions = async () => {
     for (const q of questionBank) {
       try {
         const qRef = doc(db, "questions", q.id);
+        
+        // --- LOGIC GHÉP NỐI CHÍNH ---
+        // Lấy giải thích từ file explanations.js dựa vào ID câu hỏi
+        // Nếu không tìm thấy, sẽ gán câu mặc định.
+        const explanationText = explanations[q.id] || "Chưa có giải thích chi tiết cho câu hỏi này.";
+
         await setDoc(qRef, {
-          ...q,
+          ...q, // Copy toàn bộ nội dung câu hỏi
+          explanation: explanationText, // Chèn thêm trường giải thích
           updatedAt: new Date()
         });
-        successCount++;
         
-        // Báo cáo tiến độ ở console mỗi 50 câu
-        if (successCount % 50 === 0) {
-          console.log(`Đang nạp... đã xong ${successCount} câu.`);
-        }
+        successCount++;
+        if (successCount % 50 === 0) console.log(`Đang nạp... đã xong ${successCount} câu.`);
       } catch (err) {
         console.error(`Lỗi tại câu ID ${q.id}:`, err);
         errorCount++;
       }
     }
 
-    // Thông báo tổng hợp sau khi hoàn tất
-    alert(`HOÀN TẤT LÀM MỚI DỮ LIỆU!\n\n- Đã xóa: ${deleteCount} câu cũ.\n- Nạp thành công: ${successCount} câu mới.\n- Lỗi: ${errorCount} câu.`);
+    alert(`HOÀN TẤT LÀM MỚI DỮ LIỆU!\n- Đã nạp thành công: ${successCount} câu kèm giải thích.\n- Lỗi: ${errorCount} câu.`);
     
   } catch (globalError) {
     console.error("Lỗi hệ thống:", globalError);
