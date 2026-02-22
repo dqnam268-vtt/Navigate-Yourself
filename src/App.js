@@ -163,7 +163,7 @@ function App() {
 
     // Yêu cầu mật khẩu
     const passwordInput = window.prompt(`🔒 BẢO MẬT: Nhập mật khẩu giáo viên để xóa dữ liệu của ${viewingStudent}:`);
-    if (passwordInput !== "namy") {
+    if (passwordInput !== "namy241222") {
       if (passwordInput !== null) alert("❌ Sai mật khẩu! Bạn không có quyền xóa dữ liệu.");
       return;
     }
