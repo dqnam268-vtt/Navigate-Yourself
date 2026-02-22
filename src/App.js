@@ -20,13 +20,12 @@ const TOPICS = [
   "Verb Patterns"
 ];
 
-// Bảng màu chuẩn cho 5 chủ đề
 const TOPIC_COLORS = {
-  "Relative clause": "#6c5ce7",      // Tím dịu
-  "Will/Be Going To": "#00b894",     // Xanh ngọc
-  "First Conditional": "#fdcb6e",    // Vàng nghệ
-  "Second Conditional": "#e17055",   // Cam đất
-  "Verb Patterns": "#0984e3"         // Xanh dương
+  "Relative clause": "#6c5ce7",
+  "Will/Be Going To": "#00b894",
+  "First Conditional": "#fdcb6e",
+  "Second Conditional": "#e17055",
+  "Verb Patterns": "#0984e3"
 };
 
 function App() {
@@ -35,6 +34,9 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
+  // State mới để điều khiển ẩn/hiện biểu đồ (Mặc định hiện)
+  const [showChart, setShowChart] = useState(true);
+  
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
   );
@@ -42,7 +44,6 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [interactionLogs, setInteractionLogs] = useState([]);
 
-  // 1. Lắng nghe dữ liệu (Giữ nguyên logic cũ)
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -70,7 +71,6 @@ function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // 2. Tải dữ liệu ban đầu
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -94,7 +94,6 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // 3. Xử lý câu trả lời
   const handleAnswer = async (opt) => {
     if (!currentQuestion || !user) return;
     const isCorrect = opt.startsWith(currentQuestion.answer.charAt(0)); 
@@ -127,14 +126,12 @@ function App() {
     setCurrentQuestion(nextQ);
   };
 
-  // ============================
-  // GIAO DIỆN CHƯA ĐĂNG NHẬP
-  // ============================
+  // UI Đăng nhập
   if (!user) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-      <div style={{ background: '#fff', padding: '40px 50px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '350px' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', padding: '20px' }}>
+      <div style={{ background: '#fff', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
         <div style={{ width: '60px', height: '60px', background: '#6c5ce7', color: '#fff', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 20px', fontWeight: 'bold' }}>BKT</div>
-        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0' }}>Linguistics Research</h2>
+        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Linguistics Research</h2>
         <p style={{ color: '#636e72', fontSize: '14px', marginBottom: '30px' }}>Hệ thống học tập thích ứng</p>
         
         <input type="email" placeholder="Email học viên" onChange={e => setEmail(e.target.value)} style={{width: '100%', boxSizing: 'border-box', padding: '14px', marginBottom: '15px', borderRadius: '10px', border: '1px solid #dfe6e9', outline: 'none', fontSize: '15px'}} />
@@ -150,26 +147,31 @@ function App() {
     </div>
   );
 
-  // ============================
-  // GIAO DIỆN ĐĂNG NHẬP THÀNH CÔNG
-  // ============================
   const currentColor = currentQuestion ? TOPIC_COLORS[currentQuestion.topic] : '#6c5ce7';
 
+  // UI Đã đăng nhập
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '30px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
       
-      {/* CSS Nhúng cho các hiệu ứng Hover (Chuột lướt qua) */}
+      {/* CSS Nhúng cho Mobile và Hover */}
       <style>{`
         .option-btn { transition: all 0.2s ease; border: 2px solid transparent; }
         .option-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: ${currentColor}; background: #fdfdfd !important; }
         .logout-btn:hover { background: #ff7675 !important; color: white !important; border-color: #ff7675 !important; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        
+        /* Chỉnh bố cục trên điện thoại */
+        @media (max-width: 768px) {
+          .main-layout { grid-template-columns: 1fr !important; gap: 20px !important; }
+          .app-header { flex-direction: column; gap: 15px; text-align: center; padding: 20px !important; }
+          .header-info { flex-direction: column; }
+        }
       `}</style>
 
       {/* HEADER */}
-      <header style={{ maxWidth: '1200px', margin: '0 auto 30px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px 30px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <header className="app-header" style={{ maxWidth: '1200px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px 30px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div className="header-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', color: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' }}>N</div>
           <div>
             <h2 style={{ margin: 0, color: '#2d3436', fontSize: '18px' }}>Navigate-Yourself BKT</h2>
@@ -179,14 +181,14 @@ function App() {
         <button className="logout-btn" onClick={() => signOut(auth)} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #dfe6e9', background: '#fff', color: '#636e72', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>Đăng xuất</button>
       </header>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '5fr 4fr', gap: '30px' }}>
+      <div className="main-layout" style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '5fr 4fr', gap: '30px' }}>
         
         {/* CỘT TRÁI: KHUNG CÂU HỎI */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ background: '#fff', padding: '35px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', minHeight: '400px' }}>
+          <div style={{ background: '#fff', padding: '30px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', minHeight: '350px' }}>
             {currentQuestion ? (
               <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
                   <span style={{ background: `${currentColor}20`, color: currentColor, padding: '6px 15px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{currentQuestion.topic}</span>
                   <span style={{ color: '#b2bec3', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{width: '8px', height: '8px', borderRadius: '50%', background: '#fdcb6e', display: 'inline-block'}}></span>
@@ -194,7 +196,7 @@ function App() {
                   </span>
                 </div>
                 
-                <h3 style={{ lineHeight: '1.6', color: '#2d3436', fontSize: '20px', marginBottom: '30px' }}>{currentQuestion.content}</h3>
+                <h3 style={{ lineHeight: '1.6', color: '#2d3436', fontSize: '18px', marginBottom: '30px' }}>{currentQuestion.content}</h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {currentQuestion.options.map((opt, i) => (
@@ -202,7 +204,7 @@ function App() {
                       key={i} 
                       className="option-btn"
                       onClick={() => handleAnswer(opt)}
-                      style={{ textAlign: 'left', padding: '16px 20px', borderRadius: '12px', background: '#f8fafc', color: '#2d3436', fontSize: '16px', cursor: 'pointer' }}
+                      style={{ textAlign: 'left', padding: '16px 20px', borderRadius: '12px', background: '#f8fafc', color: '#2d3436', fontSize: '15px', cursor: 'pointer' }}
                     >
                       {opt}
                     </button>
@@ -218,32 +220,44 @@ function App() {
         </div>
 
         {/* CỘT PHẢI: BIỂU ĐỒ & LOGS */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Biểu đồ Multi-line */}
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)' }}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#2d3436', fontSize: '16px' }}>Đồ thị tinh thông đa lĩnh vực (P(L))</h3>
-            <div style={{ width: '100%', height: 260 }}>
-              <ResponsiveContainer>
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-                  <XAxis dataKey="step" tick={{fontSize: 12, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{fontSize: 12, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 5px 15px rgba(0,0,0,0.1)'}} />
-                  <Legend iconType="circle" wrapperStyle={{fontSize: '12px'}} />
-                  {TOPICS.map(topic => (
-                    <Line key={topic} type="monotone" dataKey={topic} stroke={TOPIC_COLORS[topic]} strokeWidth={3} connectNulls activeDot={{ r: 6 }} dot={{ r: 3, strokeWidth: 2 }} />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+          {/* Biểu đồ Multi-line CÓ NÚT ẨN/HIỆN */}
+          <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
+            <div 
+              onClick={() => setShowChart(!showChart)} 
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}
+            >
+              <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị tinh thông (P(L))</h3>
+              <span style={{ fontSize: '13px', color: '#6c5ce7', fontWeight: 'bold', background: '#f0f0ff', padding: '5px 12px', borderRadius: '15px' }}>
+                {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
+              </span>
             </div>
+            
+            {/* Vùng vẽ đồ thị: Sẽ biến mất khi showChart = false */}
+            {showChart && (
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer>
+                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
+                    <XAxis dataKey="step" tick={{fontSize: 11, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 100]} tick={{fontSize: 11, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 5px 15px rgba(0,0,0,0.1)'}} />
+                    <Legend iconType="circle" wrapperStyle={{fontSize: '11px', paddingTop: '10px'}} />
+                    {TOPICS.map(topic => (
+                      <Line key={topic} type="monotone" dataKey={topic} stroke={TOPIC_COLORS[topic]} strokeWidth={3} connectNulls activeDot={{ r: 6 }} dot={{ r: 3, strokeWidth: 2 }} />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           {/* Bảng Logs */}
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', flexGrow: 1 }}>
+          <div style={{ background: '#fff', padding: '20px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', flexGrow: 1 }}>
             <h3 style={{ margin: '0 0 15px 0', color: '#2d3436', fontSize: '16px' }}>Lịch sử tương tác</h3>
-            <div className="custom-scrollbar" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div className="custom-scrollbar" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                 <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
                   <tr style={{ color: '#a4b0be', textAlign: 'left' }}>
                     <th style={{padding: '10px 5px', borderBottom: '2px solid #f1f2f6'}}>Câu</th>
@@ -257,12 +271,12 @@ function App() {
                     <tr key={log.id} style={{ borderBottom: '1px solid #f8fafc' }}>
                       <td style={{padding: '12px 5px', color: '#636e72'}}>#{interactionLogs.length - i}</td>
                       <td style={{padding: '12px 5px'}}>
-                        <span style={{background: `${TOPIC_COLORS[log.topic]}15`, color: TOPIC_COLORS[log.topic], padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold'}}>{log.topic}</span>
+                        <span style={{background: `${TOPIC_COLORS[log.topic]}15`, color: TOPIC_COLORS[log.topic], padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>{log.topic}</span>
                       </td>
                       <td style={{padding: '12px 5px'}}>
                         {log.isCorrect 
-                          ? <span style={{background: '#e0fbf1', color: '#00b894', padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold'}}>ĐÚNG</span>
-                          : <span style={{background: '#ffeaa7', color: '#d63031', padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold'}}>SAI</span>
+                          ? <span style={{background: '#e0fbf1', color: '#00b894', padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold'}}>ĐÚNG</span>
+                          : <span style={{background: '#ffeaa7', color: '#d63031', padding: '4px 8px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold'}}>SAI</span>
                         }
                       </td>
                       <td style={{padding: '12px 5px', fontWeight: 'bold', color: '#2d3436'}}>{(log.pL_after * 100).toFixed(1)}%</td>
