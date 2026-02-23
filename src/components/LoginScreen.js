@@ -10,12 +10,12 @@ const LoginScreen = ({ email, setEmail, password, setPassword, onLogin, onAdminU
       <div className="login-card">
         <div className="login-logo">NY</div>
         <h2 className="login-title">Navigate Yourself</h2>
-        <p className="login-subtitle">Adaptive English Learning System</p>
+        <p className="login-subtitle">Adaptive English Learning with BKT</p>
 
         <input
           type="email"
           className="login-input"
-          placeholder="Email"
+          placeholder="Your email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={handleKeyPress}
@@ -36,7 +36,7 @@ const LoginScreen = ({ email, setEmail, password, setPassword, onLogin, onAdminU
         </button>
 
         <div className="login-divider">
-          <p className="login-admin-label">Admin / Teacher</p>
+          <p className="login-admin-label">Teacher / Admin</p>
           <button className="login-admin-btn" onClick={onAdminUpload}>
             Upload Question Bank (500)
           </button>
