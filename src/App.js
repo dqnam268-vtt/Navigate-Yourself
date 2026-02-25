@@ -204,7 +204,7 @@ function App() {
       if (passwordInput !== null) alert("❌ Sai mật khẩu!");
       return;
     }
-    const confirm1 = window.confirm("XÓA SẠCH dữ liệu của TẤT CẢ học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Tiếp tục?");
+    const confirm1 = window.confirm("Xóa dữ liệu của tất cả học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Tiếp tục?");
     if (!confirm1) return;
 
     try {
@@ -332,7 +332,7 @@ function App() {
               🗑️ Xóa học sinh này
             </button>
             <button onClick={handleDeleteAllData} style={{ padding: '10px', background: '#d63031', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}>
-              🚨 Xóa TẤT CẢ dữ liệu
+              🚨 Xóa tất cả dữ liệu
             </button>
           </div>
         </div>
