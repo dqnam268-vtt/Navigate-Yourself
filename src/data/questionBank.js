@@ -919,7 +919,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "They __________ a party next Saturday. They’ve invited everyone.", 
-    options: ["A. will have", "B. are going to have", "C. had", "D. have"], 
+    options: ["A. will have", "B. are going to have", "C. had", "D. won't have"], 
     answer: "B. are going to have" 
   },
   { 
@@ -959,7 +959,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "Next year, I __________ 20 years old.", 
-    options: ["A. am going to be", "B. will be", "C. am", "D. was"], 
+    options: ["A. am going to", "B. will be", "C. am", "D. was"], 
     answer: "B. will be" 
   },
   { 
@@ -975,7 +975,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "Are you free tomorrow? - Yes, I __________ at home all day.", 
-    options: ["A. will be", "B. am going to be", "C. was", "D. am"], 
+    options: ["A. will", "B. am going to be", "C. was", "D. am"], 
     answer: "B. am going to be" 
   },
   { 
@@ -999,7 +999,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "My prediction is that technology __________ change the world completely.", 
-    options: ["A. is going to", "B. will", "C. changes", "D. changed"], 
+    options: ["A. is going to", "B. will", "C. change", "D. changed"], 
     answer: "B. will" 
   },
   { 
@@ -1014,7 +1014,7 @@ export const questionBank = [
     id: "T2_PH1_025", 
     topic: "Will/Be Going To", 
     level: "Remembering", 
-    content: "Look at the traffic! We __________ miss our flight.", 
+    content: "Look at the traffic congestion! We __________ miss our flight.", 
     options: ["A. will", "B. are going to", "C. missed", "D. miss"], 
     answer: "B. are going to" 
   },
@@ -1039,7 +1039,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "It's my birthday next week. I __________ be 25.", 
-    options: ["A. am going to", "B. will", "C. am", "D. was"], 
+    options: ["A. am going", "B. will", "C. am", "D. was"], 
     answer: "B. will" 
   },
   { 
@@ -1047,7 +1047,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Remembering", 
     content: "They __________ get married next month. They've already booked the church.", 
-    options: ["A. will", "B. are going to", "C. got", "D. get"], 
+    options: ["A. will", "B. are going to", "C. got", "D. are"], 
     answer: "B. are going to" 
   },
   { 
@@ -1080,7 +1080,7 @@ export const questionBank = [
     level: "Remembering", 
     content: "I hope we __________ each other again soon.", 
     options: ["A. will see", "B. is going to see", "C. saw", "D. sees"], 
-    answer: "B. is going to see" 
+    answer: "A. will see" 
   },
   { 
     id: "T2_PH1_034", 
@@ -1110,7 +1110,7 @@ export const questionBank = [
     id: "T2_PH1_037", 
     topic: "Will/Be Going To", 
     level: "Remembering", 
-    content: "He __________ his holidays in France. He has already booked the flight.", 
+    content: "He __________ his holidays in France next spring. He has already booked the flight.", 
     options: ["A. will spend", "B. is going to spend", "C. spent", "D. spends"], 
     answer: "B. is going to spend" 
   },
@@ -1134,9 +1134,9 @@ export const questionBank = [
     id: "T2_PH1_040", 
     topic: "Will/Be Going To", 
     level: "Remembering", 
-    content: "Look at the clock! We __________ late for the meeting!", 
-    options: ["A. will be", "B. are going to be", "C. were", "D. are"], 
-    answer: "A. will be" 
+    content: "It's 8:10 PM already! We __________ late for the concert!", 
+    options: ["A. will be", "B. are going to be", "C. were", "D. can"], 
+    answer: "B. are going to be" 
   },
 
   // ============================================================
@@ -1146,7 +1146,7 @@ export const questionBank = [
     id: "T2_PH2_001", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "A: \"I’ve just realized I don’t have enough cash for the business seminar.\" B: \"Don’t worry. I _______ you some money right now.\"", 
+    content: "A: \"I’ve just realized I don’t have enough cash for the business seminar.\" B: \"Don’t worry. I _______ you some money.\"", 
     options: ["A. will lend", "B. am going to lend", "C. lend", "D. am lending"], 
     answer: "A. will lend" 
   },
@@ -1154,8 +1154,8 @@ export const questionBank = [
     id: "T2_PH2_002", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "Look at the employee's schedule! He has a flight ticket and a visa ready for Singapore. He _______ a business conference there this Friday.", 
-    options: ["A. will attend", "B. is going to attend", "C. attends", "D. attended"], 
+    content: "Look at the employee's schedule! He has a a visa ready for Singapore. He _______ a business conference there this Friday.", 
+    options: ["A. will attend", "B. is going to attend", "C. attend", "D. attended"], 
     answer: "B. is going to attend" 
   },
   { 
@@ -1178,7 +1178,7 @@ export const questionBank = [
     id: "T2_PH2_005", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "According to the company's financial report, they have lost millions this year. It seems they _______ some of their staff to save money.", 
+    content: "According to the company's financial report, they have lost millions this year. They _______ some of their staff to save money.", 
     options: ["A. will fire", "B. fired", "C. are going to fire", "D. firing"], 
     answer: "C. are going to fire" 
   },
@@ -1203,7 +1203,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "A: \"I cannot carry all these heavy boxes of documents to the storage room.\" B: \"Stand back. I _______ you with them.\"", 
-    options: ["A. will help", "B. am going to help", "C. help", "D. helped"], 
+    options: ["A. will help", "B. am going to help", "C. helps", "D. helped"], 
     answer: "A. will help" 
   },
   { 
@@ -1211,7 +1211,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "The marketing director is very sick today, so she _______ the meeting this afternoon. She informed everyone an hour ago.", 
-    options: ["A. will not attend", "B. is not going to attend", "C. does not attend", "D. did not attend"], 
+    options: ["A. will not attend", "B. is not going to attend", "C. do not attend", "D. did not attend"], 
     answer: "B. is not going to attend" 
   },
   { 
@@ -1227,7 +1227,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "A: \"Did you remember to email the financial report to the boss?\" B: \"Oh no, I completely forgot! I _______ it right now.\"", 
-    options: ["A. will send", "B. am going to send", "C. send", "D. sending"], 
+    options: ["A. will send", "B. am going to send", "C. sends", "D. sending"], 
     answer: "A. will send" 
   },
   { 
@@ -1235,14 +1235,14 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "We have booked the venue and sent out the invitations. We _______ our new product on the 15th of next month.", 
-    options: ["A. will launch", "B. launch", "C. are going to launch", "D. launched"], 
+    options: ["A. will launch", "B. launches", "C. are going to launch", "D. launched"], 
     answer: "C. are going to launch" 
   },
   { 
     id: "T2_PH2_013", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "Look at the stock market! The prices of technology shares are dropping fast. Many investors _______ a lot of money today.", 
+    content: "Look at the stock market! The prices of technology shares are dropping fast. Many investors _______ a lot of money.", 
     options: ["A. will lose", "B. are going to lose", "C. lose", "D. lost"], 
     answer: "B. are going to lose" 
   },
@@ -1251,7 +1251,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "A: \"This software is too difficult to use. I can't understand the manual.\" B: \"Let me look at it. I _______ you how it works.\"", 
-    options: ["A. will show", "B. am going to show", "C. show", "D. showed"], 
+    options: ["A. will show", "B. am going to show", "C. shows", "D. showed"], 
     answer: "A. will show" 
   },
   { 
@@ -1259,14 +1259,14 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "The CEO has hired a team of expert architects because he _______ a new branch in the city center.", 
-    options: ["A. will build", "B. is going to build", "C. builds", "D. built"], 
+    options: ["A. build", "B. is going to build", "C. builds", "D. built"], 
     answer: "B. is going to build" 
   },
   { 
     id: "T2_PH2_016", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "I'm sure you _______ your new job at the international bank. The environment there is great.", 
+    content: "I'm sure you _______ your new job at the international bank", 
     options: ["A. will enjoy", "B. are going to enjoy", "C. enjoy", "D. enjoyed"], 
     answer: "A. will enjoy" 
   },
@@ -1274,7 +1274,7 @@ export const questionBank = [
     id: "T2_PH2_017", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "Look at those dark clouds gathering over the city! The outdoor business event _______ delayed.", 
+    content: "Look at those dark clouds gathering over the city! The outdoor business event tonight _______ delayed.", 
     options: ["A. will be", "B. is going to be", "C. is", "D. was"], 
     answer: "B. is going to be" 
   },
@@ -1291,7 +1291,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "My manager has bought two tickets for the marketing seminar. She and I _______ it together tomorrow.", 
-    options: ["A. will attend", "B. attend", "C. are going to attend", "D. attended"], 
+    options: ["A. will attend", "B. attends", "C. are going to attend", "D. attended"], 
     answer: "C. are going to attend" 
   },
   { 
@@ -1315,7 +1315,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "The deadline is tomorrow and we still have a lot to do. We _______ finish on time.", 
-    options: ["A. will not", "B. are not going to", "C. do not", "D. did not"], 
+    options: ["A. will", "B. are not going to", "C. do not", "D. did not"], 
     answer: "B. are not going to" 
   },
   { 
@@ -1338,7 +1338,7 @@ export const questionBank = [
     id: "T2_PH2_025", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "I don't think the board of directors _______ the new project proposal. It’s too risky.", 
+    content: "I don't think the board of directors _______ the new project proposal.", 
     options: ["A. will approve", "B. are going to approve", "C. approve", "D. approved"], 
     answer: "A. will approve" 
   },
@@ -1362,8 +1362,8 @@ export const questionBank = [
     id: "T2_PH2_028", 
     topic: "Will/Be Going To", 
     level: "Understanding", 
-    content: "Look at the sales figures! They are terrible. The company _______ a very bad quarter.", 
-    options: ["A. will have", "B. is going to have", "C. has", "D. had"], 
+    content: "Look at the sales figures! They are terrible. The company _______ a very bad year.", 
+    options: ["A. will have", "B. is going to have", "C. have", "D. have had"], 
     answer: "B. is going to have" 
   },
   { 
@@ -1379,7 +1379,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Understanding", 
     content: "The manager has prepared all the slides. She _______ her presentation in ten minutes.", 
-    options: ["A. will start", "B. is going to start", "C. starts", "D. started"], 
+    options: ["A. will start", "B. is going to start", "C. start", "D. started"], 
     answer: "B. is going to start" 
   },
 
@@ -1428,8 +1428,8 @@ export const questionBank = [
     id: "T2_PH3_006", 
     topic: "Will/Be Going To", 
     level: "Applying", 
-    content: "The new marketing strategy ________ presented by the manager at 3 PM. It's on the schedule.", 
-    options: ["A. is going to be", "B. will be", "C. is being", "D. be"], 
+    content: "The new marketing strategy ________ presented by the manager tomorrow. It's on the schedule.", 
+    options: ["A. is going to be", "B. will be", "C. being", "D. be"], 
     answer: "A. is going to be" 
   },
   { 
@@ -1460,8 +1460,8 @@ export const questionBank = [
     id: "T2_PH3_010", 
     topic: "Will/Be Going To", 
     level: "Applying", 
-    content: "The boss is very angry about the mistake. He ________ someone today.", 
-    options: ["A. is going to fire", "B. will fire", "C. firing", "D. fires"], 
+    content: "The boss is very angry about the mistake. He ________ someone tommorow.", 
+    options: ["A. is going to fire", "B. will be fired", "C. firing", "D. fires"], 
     answer: "A. is going to fire" 
   },
   { 
@@ -1485,7 +1485,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Applying", 
     content: "They have booked the tickets. They ________ to New York for a business conference.", 
-    options: ["A. will fly", "B. flying", "C. fly", "D. are going to fly"], 
+    options: ["A. will fly", "B. flying", "C. flies", "D. are going to fly"], 
     answer: "D. are going to fly" 
   },
   { 
@@ -1524,7 +1524,7 @@ export const questionBank = [
     id: "T2_PH3_018", 
     topic: "Will/Be Going To", 
     level: "Applying", 
-    content: "Look at the time! We ________ late for the meeting.", 
+    content: "Look at the time! We ________ late for the upcoming meeting.", 
     options: ["A. will be", "B. are going to be", "C. being", "D. be"], 
     answer: "B. are going to be" 
   },
@@ -1540,7 +1540,7 @@ export const questionBank = [
     id: "T2_PH3_020", 
     topic: "Will/Be Going To", 
     level: "Applying", 
-    content: "She has applied for the scholarship. She ________ abroad if she gets it.", 
+    content: "She has applied for the scholarship. She ________ abroad.", 
     options: ["A. is going to study", "B. will study", "C. studying", "D. studies"], 
     answer: "A. is going to study" 
   },
@@ -1558,8 +1558,8 @@ export const questionBank = [
     id: "T2_PH4_002", 
     topic: "Will/Be Going To", 
     level: "Analyzing", 
-    content: "The plane to Singapore _______ at 6:30 AM tomorrow morning.", 
-    options: ["A. departs", "B. is departing", "C. will depart", "D. is going to depart"], 
+    content: "The plane to Singapore _______ at 6:30 AM tomorrow.", 
+    options: ["A. departs", "B. is departing", "C. will departed", "D. is going depart"], 
     answer: "A. departs" 
   },
   { 
@@ -1575,7 +1575,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Analyzing", 
     content: "According to the terrible financial report, the old factory _______ next month to cut costs.", 
-    options: ["A. is going to be sold", "B. will sell", "C. will be sold", "D. sells"], 
+    options: ["A. is going to be sold", "B. will sell", "C. will have sold", "D. sells"], 
     answer: "A. is going to be sold" 
   },
   { 
@@ -1583,7 +1583,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Analyzing", 
     content: "We _______ a business dinner with the Japanese clients tonight. I booked the best restaurant yesterday.", 
-    options: ["A. are having", "B. will have", "C. have", "D. are going to having"], 
+    options: ["A. are having", "B. will have had", "C. have", "D. are going to having"], 
     answer: "A. are having" 
   },
   { 
@@ -1591,7 +1591,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Analyzing", 
     content: "You cannot enter the office building right now. It _______ at 10 PM every evening for security reasons.", 
-    options: ["A. is locked", "B. will be locked", "C. is going to be locked", "D. locks"], 
+    options: ["A. is locked", "B. will be locked", "C. is going to be locked", "D. lock"], 
     answer: "A. is locked" 
   },
   { 
@@ -1615,7 +1615,7 @@ export const questionBank = [
     topic: "Will/Be Going To", 
     level: "Analyzing", 
     content: "If the stock market crashes again, many small companies _______ bankrupt.", 
-    options: ["A. will go", "B. are going to go", "C. go", "D. are going"], 
+    options: ["A. will go", "B. are going to have", "C. go", "D. were going"], 
     answer: "A. will go" 
   },
   { 

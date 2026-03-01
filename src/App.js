@@ -9,12 +9,15 @@ import {
 import { updateBKT } from './logic/bktEngine';
 import { getAdaptiveQuestion } from './logic/AdaptiveQuestionSelector';
 import { uploadAllQuestions } from './utils/bulkUpload';
-
 import { explanations } from './data/explanations';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 
+// ─── TÀI KHOẢN QUẢN TRỊ VIÊN (Giáo viên) ────────────────────────────────────────
+const ADMIN_EMAIL = "admin@edu.vn";
+
+// ─── GAMIFIED CONSTANTS ─────────────────────────────────────────────────────────
 const TOPICS = [
   "Relative clause", 
   "Will/Be Going To", 
@@ -23,14 +26,120 @@ const TOPICS = [
   "Verb Patterns"
 ];
 
-const TOPIC_COLORS = {
-  "Relative clause": "#6c5ce7",
-  "Will/Be Going To": "#00b894",
-  "First Conditional": "#fdcb6e",
-  "Second Conditional": "#e17055",
-  "Verb Patterns": "#0984e3"
+const GAMIFIED_TOPICS = {
+  "Relative clause": { icon: "🔗", color: "from-blue-400 to-indigo-500", shadow: "shadow-blue-300", hex: "#6366f1" },
+  "Will/Be Going To": { icon: "🔮", color: "from-emerald-400 to-teal-500", shadow: "shadow-emerald-300", hex: "#14b8a6" },
+  "First Conditional": { icon: "🌱", color: "from-yellow-400 to-orange-500", shadow: "shadow-yellow-300", hex: "#f59e0b" },
+  "Second Conditional": { icon: "💭", color: "from-rose-400 to-pink-500", shadow: "shadow-rose-300", hex: "#f43f5e" },
+  "Verb Patterns": { icon: "🧩", color: "from-violet-400 to-purple-500", shadow: "shadow-violet-300", hex: "#8b5cf6" }
 };
 
+// ─── UI HELPERS ─────────────────────────────────────────────────────────────────
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const pct = (v) => Math.round(v * 100);
+
+function XPBar({ xp, level }) {
+  const cap = level * 100;
+  const w = clamp((xp % cap) / cap, 0, 1) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-bold text-yellow-300">Lvl {level}</span>
+      <div className="flex-1 h-3 bg-white/10 rounded-full overflow-hidden min-w-[100px]">
+        <div
+          className="h-full bg-gradient-to-r from-yellow-300 to-orange-400 rounded-full transition-all duration-700"
+          style={{ width: `${w}%` }}
+        />
+      </div>
+      <span className="text-xs text-white/60">{xp % cap}/{cap} XP</span>
+    </div>
+  );
+}
+
+function KnowledgeMeter({ p }) {
+  const steps = 5;
+  const filled = Math.round(p * steps);
+  const labels = ["Novice","Beginner","Learner","Skilled","Expert","Master"];
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex gap-1">
+        {Array.from({ length: steps }).map((_, i) => (
+          <div
+            key={i}
+            className={`w-5 h-5 rounded transition-all duration-500 border-2 ${
+              i < filled
+                ? "bg-gradient-to-b from-green-300 to-emerald-500 border-emerald-600 scale-110 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                : "bg-white/10 border-white/20"
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-[10px] font-semibold text-white/50 uppercase tracking-widest mt-1">
+        {labels[filled]}
+      </span>
+    </div>
+  );
+}
+
+function Btn3D({ children, onClick, color = "indigo", disabled, size = "md", className = "" }) {
+  const cols = {
+    indigo: "bg-indigo-500 border-indigo-700 hover:bg-indigo-400 active:translate-y-1 active:shadow-none",
+    green:  "bg-emerald-500 border-emerald-700 hover:bg-emerald-400 active:translate-y-1 active:shadow-none",
+    red:    "bg-rose-500 border-rose-700 hover:bg-rose-400 active:translate-y-1 active:shadow-none",
+    yellow: "bg-yellow-500 border-yellow-700 hover:bg-yellow-400 active:translate-y-1 active:shadow-none",
+    gray:   "bg-slate-600 border-slate-800 hover:bg-slate-500 active:translate-y-1 active:shadow-none",
+  };
+  const sizes = { md: "px-6 py-3 text-sm", lg: "px-8 py-4 text-base", sm: "px-4 py-2 text-xs" };
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`
+        ${cols[color]} ${sizes[size]} ${className}
+        font-extrabold text-white rounded-xl border-b-4
+        transition-all duration-100
+        shadow-lg -translate-y-1
+        disabled:opacity-50 disabled:pointer-events-none
+        cursor-pointer select-none flex items-center justify-center gap-2
+      `}
+    >
+      {children}
+    </button>
+  );
+}
+
+function AnswerOption({ label, text, onClick, state }) {
+  const base = "w-full flex items-center gap-4 p-4 rounded-xl font-bold text-left border-b-4 transition-all duration-150 cursor-pointer select-none text-[15px]";
+  const styles = {
+    idle:    "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-[1.01] text-white/90",
+    correct: "bg-emerald-500/90 border-emerald-700 text-white scale-[1.01] shadow-[0_0_15px_rgba(16,185,129,0.4)]",
+    wrong:   "bg-rose-500/90 border-rose-700 text-white",
+    missed:  "bg-emerald-500/30 border-emerald-500/50 text-emerald-100",
+  };
+  return (
+    <button className={`${base} ${styles[state]}`} onClick={onClick} disabled={state !== "idle"}>
+      <span className="w-8 h-8 flex-shrink-0 rounded-lg bg-black/20 flex items-center justify-center font-black text-sm text-white/70">
+        {label}
+      </span>
+      <span className="flex-1">{text}</span>
+      {state === "correct" && <span className="ml-auto text-xl drop-shadow-md">✅</span>}
+      {state === "wrong"   && <span className="ml-auto text-xl drop-shadow-md">❌</span>}
+      {state === "missed"  && <span className="ml-auto text-xl drop-shadow-md">💡</span>}
+    </button>
+  );
+}
+
+function StreakBadge({ streak }) {
+  if (!streak) return null;
+  const fire = streak >= 5 ? "🔥🔥" : "🔥";
+  return (
+    <div className="flex items-center gap-1.5 bg-orange-500/20 border border-orange-400/40 rounded-full px-3 py-1.5 shadow-[0_0_10px_rgba(249,115,22,0.3)]">
+      <span className="text-sm">{fire}</span>
+      <span className="text-xs font-black text-orange-400 uppercase tracking-wide">{streak} streak</span>
+    </div>
+  );
+}
+
+// ─── MAIN APP ───────────────────────────────────────────────────────────────────
 function App() {
   const [user, setUser] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -43,8 +152,14 @@ function App() {
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
   const [isWaitingNext, setIsWaitingNext] = useState(false);
 
-  const [allStudents, setAllStudents] = useState([]);
+  // Gamification states
+  const [sessionXP, setSessionXP] = useState(0);
+  const [sessionStreak, setSessionStreak] = useState(0);
+
+  // ADMIN States
+  const [allStudentsData, setAllStudentsData] = useState([]);
   const [viewingStudent, setViewingStudent] = useState("");
+  const [sortCriterion, setSortCriterion] = useState("Average"); // Lọc theo Điểm Trung Bình hoặc Từng Chủ đề
 
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
@@ -53,18 +168,31 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [interactionLogs, setInteractionLogs] = useState([]);
 
+  // Fetch dữ liệu quản lý (Chỉ dành cho Admin)
   useEffect(() => {
     if (user) {
-      setViewingStudent(user.email);
-      const fetchStudents = async () => {
-        const snap = await getDocs(collection(db, "mastery"));
-        const studentEmails = snap.docs.map(doc => doc.id);
-        setAllStudents(studentEmails);
-      };
-      fetchStudents();
+      if (user.email === ADMIN_EMAIL) {
+        const fetchAllMastery = async () => {
+          const snap = await getDocs(collection(db, "mastery"));
+          const data = snap.docs.map(doc => {
+            const masteryData = doc.data();
+            let sum = 0;
+            TOPICS.forEach(t => sum += (masteryData[t] || 0.3));
+            const avg = sum / TOPICS.length;
+            return { email: doc.id, mastery: masteryData, average: avg };
+          });
+          setAllStudentsData(data);
+          if (data.length > 0) setViewingStudent(data[0].email);
+        };
+        fetchAllMastery();
+      } else {
+        // Học sinh thường thì chỉ xem được của chính mình
+        setViewingStudent(user.email);
+      }
     }
   }, [user]);
 
+  // Lấy lịch sử Logs của người đang được xem
   useEffect(() => {
     if (!viewingStudent) return;
     const q = query(
@@ -87,13 +215,12 @@ function App() {
         return dataPoint;
       });
       setChartData(formattedData);
-    }, (error) => {
-      console.error("Lỗi lấy dữ liệu Logs: ", error);
-    });
+    }, (error) => console.error("Lỗi lấy dữ liệu Logs: ", error));
 
     return () => unsubscribe();
   }, [viewingStudent]);
 
+  // Lấy mastery của bản thân để làm bài
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -112,9 +239,8 @@ function App() {
         
         setCurrentQuestion({
           ...nextQ,
-          explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
+          explanation: explanations[nextQ.id] || "Đang cập nhật lời giải thích cho câu hỏi này."
         });
-
       } else {
         setUser(null);
       }
@@ -133,9 +259,17 @@ function App() {
     const topic = currentQuestion.topic;
     const pL_prev = mastery[topic] || 0.3;
     const pL_new = updateBKT(pL_prev, isCorrect);
-    
     const newMastery = { ...mastery, [topic]: pL_new };
     setMastery(newMastery);
+
+    if (isCorrect) {
+      const diffMultiplier = currentQuestion.level === "Applying" || currentQuestion.level === "Analyzing" ? 15 : 10;
+      const streakBonus = sessionStreak >= 3 ? 5 : 0;
+      setSessionXP(prev => prev + diffMultiplier + streakBonus);
+      setSessionStreak(prev => prev + 1);
+    } else {
+      setSessionStreak(0);
+    }
 
     try {
       await Promise.all([
@@ -164,72 +298,71 @@ function App() {
     
     setCurrentQuestion({
       ...nextQ,
-      explanation: explanations[nextQ.id] || "Chưa có lời giải thích."
+      explanation: explanations[nextQ.id] || "Đang cập nhật lời giải thích."
     });
+  };
+
+  // --- ADMIN FUNCTIONS ---
+  const handleAdminUpload = () => {
+    const adminPassword = window.prompt("🔒 BẢO MẬT ADMIN: Nhập mật khẩu nạp dữ liệu:");
+    if (adminPassword !== "namy241222") {
+      if (adminPassword !== null) alert("❌ Sai mật khẩu Admin!");
+      return;
+    }
+    uploadAllQuestions();
   };
 
   const handleDeleteStudentData = async () => {
     if (!viewingStudent) return;
-    const passwordInput = window.prompt(`🔒 BẢO MẬT: Nhập mật khẩu giáo viên để xóa dữ liệu của ${viewingStudent}:`);
-    if (passwordInput !== "namy241222") {
+    const passwordInput = window.prompt(`🔒 Nhập mật khẩu giáo viên để xóa dữ liệu của ${viewingStudent}:`);
+    if (passwordInput !== "namy") {
       if (passwordInput !== null) alert("❌ Sai mật khẩu!");
       return;
     }
-    const confirmDelete = window.confirm(`CẢNH BÁO: Thầy có chắc chắn muốn xóa TOÀN BỘ lịch sử của: ${viewingStudent}?`);
-    if (!confirmDelete) return;
+    if (!window.confirm(`CẢNH BÁO: Chắc chắn xóa TOÀN BỘ lịch sử của: ${viewingStudent}?`)) return;
 
     try {
       await deleteDoc(doc(db, "mastery", viewingStudent));
       const q = query(collection(db, "learning_logs"), where("student", "==", viewingStudent));
       const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id)));
-      await Promise.all(deletePromises);
+      await Promise.all(snapshot.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id))));
 
       alert(`✅ Đã xóa sạch dữ liệu của ${viewingStudent}`);
       
-      setAllStudents(prev => prev.filter(email => email !== viewingStudent));
-      if (viewingStudent === user.email) {
-        setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
-        setInteractionLogs([]);
-        setChartData([]);
-      } else {
-        setViewingStudent(user.email);
-      }
+      const newData = allStudentsData.filter(s => s.email !== viewingStudent);
+      setAllStudentsData(newData);
+      if (newData.length > 0) setViewingStudent(newData[0].email);
+      else setViewingStudent("");
+
     } catch (err) { alert("❌ Có lỗi xảy ra!"); }
   };
 
   const handleDeleteAllData = async () => {
-    const passwordInput = window.prompt("🚨 NGUY HIỂM: Nhập mật khẩu giáo viên để XÓA SẠCH TOÀN BỘ hệ thống:");
+    const passwordInput = window.prompt("🚨 NGUY HIỂM: Nhập mật khẩu giáo viên để XÓA SẠCH hệ thống:");
     if (passwordInput !== "namy") {
       if (passwordInput !== null) alert("❌ Sai mật khẩu!");
       return;
     }
-    const confirm1 = window.confirm("Xóa dữ liệu của tất cả học sinh. Hệ thống sẽ trở về trạng thái trắng tinh. Tiếp tục?");
-    if (!confirm1) return;
+    if (!window.confirm("XÓA SẠCH dữ liệu TẤT CẢ học sinh. Hệ thống sẽ trắng tinh. Tiếp tục?")) return;
 
     try {
       const masterySnap = await getDocs(collection(db, "mastery"));
-      const masteryDeletes = masterySnap.docs.map(document => deleteDoc(doc(db, "mastery", document.id)));
-      
       const logsSnap = await getDocs(collection(db, "learning_logs"));
-      const logsDeletes = logsSnap.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id)));
-      
-      await Promise.all([...masteryDeletes, ...logsDeletes]);
+      await Promise.all([
+        ...masterySnap.docs.map(document => deleteDoc(doc(db, "mastery", document.id))),
+        ...logsSnap.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id)))
+      ]);
 
       alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống!");
-      setAllStudents([user.email]);
-      setViewingStudent(user.email);
+      setAllStudentsData([]); 
+      setViewingStudent("");
       setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
-      setInteractionLogs([]);
-      setChartData([]);
+      setInteractionLogs([]); setChartData([]); setSessionXP(0); setSessionStreak(0);
     } catch (err) { alert("❌ Có lỗi xảy ra!"); }
   };
 
   const exportToExcel = () => {
-    if (interactionLogs.length === 0) {
-      alert("Chưa có dữ liệu để xuất!");
-      return;
-    }
+    if (interactionLogs.length === 0) return alert("Chưa có dữ liệu để xuất!");
     const exportData = interactionLogs.map((log, index) => ({
       "STT": interactionLogs.length - index,
       "Email Học Viên": log.student,
@@ -248,197 +381,300 @@ function App() {
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
-  // --- HÀM BẢO MẬT CHO NÚT NẠP DỮ LIỆU TỪ ADMIN ---
-  const handleAdminUpload = () => {
-    const adminPassword = window.prompt("🔒 BẢO MẬT ADMIN: Nhập mật khẩu để nạp dữ liệu ngân hàng câu hỏi:");
-    if (adminPassword !== "namy241222") {
-      if (adminPassword !== null) {
-        alert("❌ Sai mật khẩu Admin! Từ chối truy cập.");
-      }
-      return;
-    }
-    // Nếu nhập đúng mật khẩu, gọi hàm nạp dữ liệu
-    uploadAllQuestions();
-  };
 
+// --- HÀM MỚI: XUẤT EXCEL TOÀN BỘ HỌC SINH ---
+  const exportAllStudentsToExcel = async () => {
+    try {
+      // 1. Lấy toàn bộ lịch sử của tất cả học sinh
+      const snapshot = await getDocs(collection(db, "learning_logs"));
+      
+      if (snapshot.empty) {
+        alert("Chưa có dữ liệu nào trên hệ thống để xuất!");
+        return;
+      }
+
+      let rawLogs = snapshot.docs.map(doc => doc.data());
+      
+      // 2. Sắp xếp: Ưu tiên gom theo Email học sinh -> Sau đó xếp theo Thời gian làm bài
+      rawLogs.sort((a, b) => {
+        if (a.student < b.student) return -1;
+        if (a.student > b.student) return 1;
+        // Nếu cùng 1 học sinh, xếp theo thời gian (từ cũ đến mới)
+        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
+        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
+        return timeA - timeB;
+      });
+
+      // 3. Định dạng lại dữ liệu cho đẹp
+      const exportData = rawLogs.map((log, index) => ({
+        "STT Tổng": index + 1,
+        "Email Học Viên": log.student,
+        "Chủ đề": log.topic,
+        "Cấp độ": log.level,
+        "Mã Câu Hỏi": log.questionId,
+        "Kết Quả": log.isCorrect ? "ĐÚNG" : "SAI",
+        "P(L) Trước": parseFloat((log.pL_before * 100).toFixed(2)) + "%",
+        "P(L) Sau": parseFloat((log.pL_after * 100).toFixed(2)) + "%",
+        "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
+      }));
+
+      // 4. Tạo file và tải xuống
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      worksheet['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "TatCaHocSinh");
+      XLSX.writeFile(workbook, `BKT_Data_Toan_Bo_Hoc_Sinh.xlsx`);
+      
+    } catch (error) {
+      console.error("Lỗi xuất dữ liệu tổng: ", error);
+      alert("❌ Có lỗi xảy ra khi tải dữ liệu!");
+    }
+  };
+  // Logic Sắp xếp Học sinh
+  const sortedStudents = [...allStudentsData].sort((a, b) => {
+    if (sortCriterion === "Average") {
+      return b.average - a.average; // Giảm dần
+    } else {
+      const scoreA = a.mastery[sortCriterion] || 0.3;
+      const scoreB = b.mastery[sortCriterion] || 0.3;
+      return scoreB - scoreA;
+    }
+  });
+
+  // ─── LOGIN SCREEN ───────────────────────────────────────────────────────────────
   if (!user) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f4f7f6', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif', padding: '20px' }}>
-      <div style={{ background: '#fff', padding: '40px 30px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', textAlign: 'center', width: '100%', maxWidth: '380px', boxSizing: 'border-box' }}>
-        <div style={{ width: '60px', height: '60px', background: '#6c5ce7', color: '#fff', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', margin: '0 auto 20px', fontWeight: 'bold' }}>BKT</div>
-        <h2 style={{ color: '#2d3436', margin: '0 0 10px 0', fontSize: '22px' }}>Navigate Yourself</h2>
-        <p style={{ color: '#636e72', fontSize: '14px', marginBottom: '30px' }}>Hệ thống học tập thích ứng</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex justify-center items-center p-4 font-sans">
+      <div className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-3xl shadow-2xl text-center w-full max-w-[400px]">
+        <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-purple-500 text-white rounded-2xl mx-auto mb-6 flex items-center justify-center text-4xl shadow-lg shadow-indigo-500/30 rotate-3 hover:rotate-0 transition-transform">
+          🧠
+        </div>
+        <h2 className="text-white font-black text-2xl mb-1">Navigate Yourself</h2>
+        <p className="text-white/50 text-sm mb-8 font-medium">Hệ thống học tập thích ứng BKT</p>
         
-        <input type="email" placeholder="Email học viên" onChange={e => setEmail(e.target.value)} style={{width: '100%', boxSizing: 'border-box', padding: '14px', marginBottom: '15px', borderRadius: '10px', border: '1px solid #dfe6e9', outline: 'none', fontSize: '15px'}} />
-        <input type="password" placeholder="Mật khẩu" onChange={e => setPassword(e.target.value)} style={{width: '100%', boxSizing: 'border-box', padding: '14px', marginBottom: '25px', borderRadius: '10px', border: '1px solid #dfe6e9', outline: 'none', fontSize: '15px'}} />
+        <input type="email" placeholder="Email học viên" onChange={e => setEmail(e.target.value)} className="w-full p-4 mb-4 rounded-xl bg-black/20 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all" />
+        <input type="password" placeholder="Mật khẩu" onChange={e => setPassword(e.target.value)} className="w-full p-4 mb-6 rounded-xl bg-black/20 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all" />
         
-        <button onClick={() => signInWithEmailAndPassword(auth, email, password)} style={{width: '100%', padding: '14px', background: '#6c5ce7', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.3s'}}>Bắt đầu ngay</button>
+        <Btn3D color="indigo" size="lg" className="w-full mb-8" onClick={() => signInWithEmailAndPassword(auth, email, password)}>
+          Đăng nhập hệ thống 🚀
+        </Btn3D>
         
-        <div style={{marginTop: '30px', paddingTop: '20px', borderTop: '1px dashed #b2bec3'}}>
-          <p style={{fontSize: '12px', color: '#b2bec3', marginBottom: '10px'}}>Dành cho Giáo viên / Admin:</p>
-          {/* NÚT ĐÃ ĐƯỢC GẮN HÀM KIỂM TRA MẬT KHẨU */}
-          <button onClick={handleAdminUpload} style={{padding: '8px 15px', background: '#ffeaa7', color: '#d63031', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold'}}>🚀 Nạp 500 câu ngân hàng</button>
+        <div className="pt-6 border-t border-white/10">
+          <p className="text-[11px] text-white/30 uppercase tracking-widest mb-3 font-bold">Khu vực Admin</p>
+          <button onClick={handleAdminUpload} className="px-4 py-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-xs font-bold hover:bg-yellow-500/20 transition-colors">
+            ⚙️ Nạp 500 câu ngân hàng
+          </button>
         </div>
       </div>
     </div>
   );
 
-  const currentColor = currentQuestion ? TOPIC_COLORS[currentQuestion.topic] : '#6c5ce7';
+  // ─── MAIN QUIZ APP ────────────────────────────────────────────────────────────
+  const activeTopicInfo = currentQuestion ? GAMIFIED_TOPICS[currentQuestion.topic] : GAMIFIED_TOPICS["Relative clause"];
+  const level = Math.floor(sessionXP / 100) + 1;
+  const optLabels = ["A", "B", "C", "D"];
 
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '20px', fontFamily: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
-      <style>{`
-        .option-btn { transition: all 0.2s ease; border: 2px solid transparent; }
-        .option-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.08); border-color: ${currentColor}; background: #fdfdfd !important; }
-        .logout-btn:hover { background: #ff7675 !important; color: white !important; border-color: #ff7675 !important; }
-        .next-btn { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        @media (max-width: 768px) {
-          .app-header { flex-direction: column; gap: 15px; text-align: center; padding: 20px !important; }
-          .header-info { flex-direction: column; }
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex justify-center px-4 py-8 font-sans">
+      <div className="w-full max-w-[800px] flex flex-col gap-6">
 
-      <header className="app-header" style={{ maxWidth: '800px', margin: '0 auto 20px auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff', padding: '15px 30px', borderRadius: '16px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-        <div className="header-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', color: '#fff', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' }}>N</div>
-          <div>
-            <h2 style={{ margin: 0, color: '#2d3436', fontSize: '18px' }}>Navigate-Yourself BKT</h2>
-            <span style={{ color: '#636e72', fontSize: '13px' }}>Học viên đang làm bài: <strong>{user.email}</strong></span>
+        {/* 1. HEADER & XP BAR */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-md shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-xl shadow-lg">
+                🧠
+              </div>
+              <div>
+                <h1 className="font-black text-white text-lg leading-none">Navigate Yourself</h1>
+                <p className="text-[11px] text-emerald-400 font-bold tracking-wide">{user.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <StreakBadge streak={sessionStreak} />
+              <button onClick={() => signOut(auth)} className="px-3 py-1.5 rounded-lg border border-white/10 text-white/50 text-xs font-bold hover:bg-white/10 hover:text-white transition-colors">
+                Thoát
+              </button>
+            </div>
           </div>
-        </div>
-        <button className="logout-btn" onClick={() => signOut(auth)} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #dfe6e9', background: '#fff', color: '#636e72', cursor: 'pointer', fontWeight: 'bold', transition: '0.3s' }}>Đăng xuất</button>
-      </header>
-
-      <div className="main-layout" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-        
-        <div style={{ background: '#e0fbf1', padding: '20px 25px', borderRadius: '20px', border: '1px solid #00b894', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#00b894' }}>👨‍🏫 CHẾ ĐỘ GIÁO VIÊN: Xem tiến độ học sinh</span>
-          <select 
-            value={viewingStudent} 
-            onChange={(e) => setViewingStudent(e.target.value)}
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #00b894', outline: 'none', width: '100%', cursor: 'pointer', marginBottom: '5px', fontSize: '14px' }}
-          >
-            {allStudents.map(email => (
-              <option key={email} value={email}>
-                {email === user.email ? `${email} (Chính tôi)` : email}
-              </option>
-            ))}
-          </select>
-          
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <button onClick={handleDeleteStudentData} disabled={!viewingStudent} style={{ padding: '10px', background: '#ff7675', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1, opacity: !viewingStudent ? 0.5 : 1 }}>
-              🗑️ Xóa học sinh này
-            </button>
-            <button onClick={handleDeleteAllData} style={{ padding: '10px', background: '#d63031', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', flex: 1 }}>
-              🚨 Xóa tất cả dữ liệu
-            </button>
-          </div>
+          <XPBar xp={sessionXP} level={level} />
         </div>
 
-        <div style={{ background: '#fff', padding: '30px 25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)' }}>
-          {currentQuestion ? (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '10px' }}>
-                <span style={{ background: `${currentColor}20`, color: currentColor, padding: '6px 15px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>{currentQuestion.topic}</span>
-                <span style={{ color: '#b2bec3', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{width: '8px', height: '8px', borderRadius: '50%', background: '#fdcb6e', display: 'inline-block'}}></span>
-                  Level: {currentQuestion.level}
-                </span>
+        {/* 2. CHỈ HIỂN THỊ TEACHER DASHBOARD NẾU LÀ ADMIN */}
+        {user.email === ADMIN_EMAIL && (
+          <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-3xl p-5 backdrop-blur-sm">
+            <span className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-4 block">👨‍🏫 BẢNG ĐIỀU KHIỂN & XẾP HẠNG (ADMIN)</span>
+            
+            <div className="flex flex-col md:flex-row gap-4 mb-5">
+              <div className="flex-1">
+                <label className="text-[11px] text-emerald-400/70 font-bold mb-2 block uppercase tracking-wider">Tiêu chí Xếp hạng:</label>
+                <select 
+                  value={sortCriterion} 
+                  onChange={(e) => setSortCriterion(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-black/40 border border-emerald-500/30 text-emerald-300 font-bold outline-none text-sm cursor-pointer focus:border-emerald-400"
+                >
+                  <option value="Average">🌟 Điểm Trung Bình Tất Cả</option>
+                  {TOPICS.map(t => <option key={t} value={t}>📘 Bảng hạng: {t}</option>)}
+                </select>
               </div>
               
-              <h3 style={{ lineHeight: '1.6', color: '#2d3436', fontSize: '18px', marginBottom: '30px' }}>{currentQuestion.content}</h3>
+              <div className="flex-1">
+                <label className="text-[11px] text-emerald-400/70 font-bold mb-2 block uppercase tracking-wider">Chọn học sinh để xem chi tiết:</label>
+                <select 
+                  value={viewingStudent} 
+                  onChange={(e) => setViewingStudent(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-black/40 border border-emerald-500/30 text-white outline-none text-sm cursor-pointer focus:border-emerald-400"
+                >
+                  <option value="" disabled>-- Chọn học sinh --</option>
+                  {sortedStudents.map((s, index) => {
+                    const score = sortCriterion === "Average" ? pct(s.average) : pct(s.mastery[sortCriterion] || 0.3);
+                    const rank = index + 1;
+                    let rankIcon = "🎓";
+                    if (rank === 1) rankIcon = "🥇";
+                    else if (rank === 2) rankIcon = "🥈";
+                    else if (rank === 3) rankIcon = "🥉";
+
+                    return (
+                      <option key={s.email} value={s.email} className="bg-slate-800">
+                        Top {rank} {rankIcon} - {s.email} (Điểm: {score}%)
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
+            </div>
+
+            {/* CỤM NÚT CÔNG CỤ CỦA ADMIN */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-emerald-500/20">
+              <button onClick={exportAllStudentsToExcel} className="flex-1 py-2.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold hover:bg-indigo-500/30 transition-colors shadow-lg">
+                📊 Xuất Excel (TẤT CẢ HỌC SINH)
+              </button>
+              <button onClick={handleDeleteStudentData} disabled={!viewingStudent} className="flex-1 py-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold hover:bg-rose-500/20 transition-colors disabled:opacity-50">
+                🗑️ Xóa học sinh chọn
+              </button>
+              <button onClick={handleDeleteAllData} className="flex-1 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 transition-colors">
+                🚨 Reset tất cả
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 3. QUESTION CARD (CORE BKT) */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-md shadow-2xl relative overflow-hidden">
+          {currentQuestion ? (
+            <>
+              {/* Background Glow */}
+              <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${activeTopicInfo.color} opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none`} />
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Top Badges */}
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <div className="flex flex-col gap-2">
+                  <div className={`inline-flex items-center gap-2 bg-gradient-to-r ${activeTopicInfo.color} px-3 py-1 rounded-full shadow-lg`}>
+                    <span className="text-base">{activeTopicInfo.icon}</span>
+                    <span className="text-xs font-black text-white uppercase tracking-wider">{currentQuestion.topic}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-white/40 bg-white/5 px-2 py-1 rounded-md border border-white/10 inline-block w-fit">
+                    Level: {currentQuestion.level}
+                  </span>
+                </div>
+                
+                {/* Visual BKT Meter */}
+                <div className="bg-black/20 p-2 rounded-xl border border-white/5">
+                  <KnowledgeMeter p={mastery[currentQuestion.topic]} />
+                </div>
+              </div>
+              
+              {/* Question */}
+              <h3 className="text-white font-bold text-xl md:text-2xl leading-relaxed mb-8 relative z-10">
+                {currentQuestion.content}
+              </h3>
+              
+              {/* Options */}
+              <div className="flex flex-col gap-3 relative z-10">
                 {currentQuestion.options.map((opt, i) => {
-                  const isSelected = selectedOption === opt;
-                  const isActualAnswer = opt.startsWith(currentQuestion.answer.charAt(0));
-                  
-                  let btnStyle = { textAlign: 'left', padding: '16px 20px', borderRadius: '12px', background: '#f8fafc', color: '#2d3436', fontSize: '15px', cursor: 'pointer', border: '2px solid transparent' };
-                  
+                  let state = "idle";
                   if (isWaitingNext) {
-                    btnStyle.cursor = 'default';
-                    if (isSelected) {
-                      btnStyle.background = isCorrectAnswer ? '#00b894' : '#d63031';
-                      btnStyle.color = '#fff';
-                      btnStyle.borderColor = isCorrectAnswer ? '#00b894' : '#d63031';
+                    const isActualAnswer = opt.startsWith(currentQuestion.answer.charAt(0));
+                    if (selectedOption === opt) {
+                      state = isCorrectAnswer ? "correct" : "wrong";
                     } else if (isActualAnswer) {
-                      btnStyle.background = '#e0fbf1';
-                      btnStyle.borderColor = '#00b894';
-                      btnStyle.color = '#00b894';
-                      btnStyle.fontWeight = 'bold';
+                      state = "missed";
                     }
                   }
-
                   return (
-                    <button 
+                    <AnswerOption 
                       key={i} 
-                      className="option-btn"
-                      onClick={() => handleAnswer(opt)}
-                      disabled={isWaitingNext}
-                      style={btnStyle}
-                    >
-                      {opt}
-                    </button>
-                  )
+                      label={optLabels[i]} 
+                      text={opt} 
+                      onClick={() => handleAnswer(opt)} 
+                      state={state} 
+                    />
+                  );
                 })}
               </div>
 
+              {/* Feedback & Explanation */}
               {isWaitingNext && (
-                <div style={{ marginTop: '25px', padding: '20px', borderRadius: '12px', background: isCorrectAnswer ? '#e0fbf1' : '#ffeaa7' }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: isCorrectAnswer ? '#00b894' : '#d63031', fontSize: '16px' }}>
-                    {isCorrectAnswer ? '🎉 Hoàn toàn chính xác!' : '❌ Chưa chính xác!'}
-                  </h4>
-                  
-                  {!isCorrectAnswer && (
-                    <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#2d3436' }}>
-                      Đáp án đúng là: <strong>{currentQuestion.answer}</strong>
-                    </p>
-                  )}
+                <div className={`mt-6 rounded-2xl p-5 border shadow-xl animate-in fade-in slide-in-from-bottom-4 relative z-10 ${
+                  isCorrectAnswer ? "bg-emerald-500/10 border-emerald-500/30" : "bg-rose-500/10 border-rose-500/30"
+                }`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className={`font-black text-lg mb-1 ${isCorrectAnswer ? "text-emerald-400" : "text-rose-400"}`}>
+                        {isCorrectAnswer ? "🎉 Tuyệt vời! Bạn đã trả lời đúng." : "😬 Rất tiếc! Câu trả lời chưa chính xác."}
+                      </h4>
+                      {!isCorrectAnswer && (
+                        <p className="text-sm text-white/80">Đáp án đúng: <strong className="text-white">{currentQuestion.answer}</strong></p>
+                      )}
+                    </div>
+                    {isCorrectAnswer && <div className="text-xs font-black text-emerald-300 bg-emerald-500/20 px-2 py-1 rounded-lg">+ XP</div>}
+                  </div>
 
                   {currentQuestion.explanation && (
-                    <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#636e72', fontStyle: 'italic', lineHeight: '1.6' }}>
-                      💡 Giải thích: {currentQuestion.explanation}
-                    </p>
+                    <div className="bg-black/30 rounded-xl p-4 mt-4 border border-white/5 text-sm text-white/70 italic leading-relaxed">
+                      <span className="not-italic text-yellow-400 mr-2">💡</span>
+                      {currentQuestion.explanation}
+                    </div>
                   )}
 
-                  <button 
-                    className="next-btn"
-                    onClick={handleNextQuestion}
-                    style={{ marginTop: '15px', width: '100%', padding: '14px', background: currentColor, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}
-                  >
+                  <Btn3D color={isCorrectAnswer ? "green" : "red"} size="lg" className="w-full mt-6" onClick={handleNextQuestion}>
                     Câu tiếp theo ➔
-                  </button>
+                  </Btn3D>
                 </div>
               )}
             </>
           ) : (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#a4b0be', minHeight: '200px' }}>
-              <p>Đang tải câu hỏi tối ưu phân tích từ BKT...</p>
+            <div className="flex flex-col items-center justify-center py-12 opacity-50">
+              <span className="text-4xl animate-bounce mb-4">🧠</span>
+              <p className="text-white font-bold tracking-widest uppercase">Đang tải dữ liệu BKT...</p>
             </div>
           )}
         </div>
 
-        <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', transition: 'all 0.3s ease' }}>
-          <div onClick={() => setShowChart(!showChart)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: showChart ? '20px' : '0' }}>
-            <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Đồ thị xác suất làm chủ Kiến thức</h3>
-            <span style={{ fontSize: '13px', color: '#6c5ce7', fontWeight: 'bold', background: '#f0f0ff', padding: '5px 12px', borderRadius: '15px' }}>
+        {/* 4. CHARTS & HISTORY (DARK THEME) */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div onClick={() => setShowChart(!showChart)} className="flex justify-between items-center cursor-pointer mb-6 group">
+            <h3 className="text-white font-black text-sm uppercase tracking-widest flex items-center gap-2">
+              📊 Đồ thị làm chủ kiến thức {user.email === ADMIN_EMAIL && <span className="text-emerald-400 lowercase normal-case ml-2">(Của: {viewingStudent})</span>}
+            </h3>
+            <span className="text-xs font-bold text-white/30 bg-white/5 px-3 py-1 rounded-full group-hover:bg-white/10 transition-colors">
               {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
             </span>
           </div>
           
           {showChart && (
-            <div style={{ width: '100%', height: 300 }}>
+            <div className="w-full h-[300px]">
               <ResponsiveContainer>
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f2f6" />
-                  <XAxis dataKey="step" tick={{fontSize: 12, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{fontSize: 12, fill: '#a4b0be'}} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{borderRadius: '10px', border: 'none', boxShadow: '0 5px 15px rgba(0,0,0,0.1)'}} />
-                  <Legend iconType="circle" wrapperStyle={{fontSize: '12px', paddingTop: '15px'}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                  <XAxis dataKey="step" tick={{fontSize: 11, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 100]} tick={{fontSize: 11, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)'}} 
+                    itemStyle={{fontWeight: 'bold'}}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{fontSize: '11px', paddingTop: '15px', color: '#94a3b8'}} />
                   {TOPICS.map(topic => (
-                    <Line key={topic} type="monotone" dataKey={topic} stroke={TOPIC_COLORS[topic]} strokeWidth={3} connectNulls activeDot={{ r: 6 }} dot={{ r: 3, strokeWidth: 2 }} />
+                    <Line key={topic} type="monotone" dataKey={topic} stroke={GAMIFIED_TOPICS[topic].hex} strokeWidth={3} connectNulls activeDot={{ r: 6, fill: GAMIFIED_TOPICS[topic].hex, stroke: '#fff', strokeWidth: 2 }} dot={{ r: 2, strokeWidth: 2 }} />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -446,37 +682,37 @@ function App() {
           )}
         </div>
 
-        <div style={{ background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.04)', marginBottom: '40px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, color: '#2d3436', fontSize: '16px' }}>Lịch sử tương tác</h3>
-            <button onClick={exportToExcel} style={{ padding: '8px 18px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s' }}>
-              📥 Xuất Excel
-            </button>
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm mb-10">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-white font-black text-sm uppercase tracking-widest">📝 Lịch sử tương tác</h3>
+            <Btn3D color="gray" size="sm" onClick={exportToExcel}>📥 Xuất Excel</Btn3D>
           </div>
-          <div className="custom-scrollbar" style={{ maxHeight: '350px', overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-                <tr style={{ color: '#a4b0be', textAlign: 'left' }}>
-                  <th style={{padding: '12px 10px', borderBottom: '2px solid #f1f2f6'}}>Câu</th>
-                  <th style={{padding: '12px 10px', borderBottom: '2px solid #f1f2f6'}}>Chủ đề</th>
-                  <th style={{padding: '12px 10px', borderBottom: '2px solid #f1f2f6'}}>Kết quả</th>
-                  <th style={{padding: '12px 10px', borderBottom: '2px solid #f1f2f6'}}>P(L) Sau</th>
+          <div className="custom-scrollbar max-h-[300px] overflow-y-auto pr-2">
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-slate-900/90 backdrop-blur z-10 text-[11px] uppercase tracking-wider text-white/40">
+                <tr>
+                  <th className="pb-3 font-bold border-b border-white/10">Câu</th>
+                  <th className="pb-3 font-bold border-b border-white/10">Chủ đề</th>
+                  <th className="pb-3 font-bold border-b border-white/10">Kết quả</th>
+                  <th className="pb-3 font-bold border-b border-white/10">P(L) Sau</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-white/70">
                 {interactionLogs.map((log, i) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{padding: '15px 10px', color: '#636e72'}}>#{interactionLogs.length - i}</td>
-                    <td style={{padding: '15px 10px'}}>
-                      <span style={{background: `${TOPIC_COLORS[log.topic]}15`, color: TOPIC_COLORS[log.topic], padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold'}}>{log.topic}</span>
+                  <tr key={log.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="py-3 font-medium text-white/40">#{interactionLogs.length - i}</td>
+                    <td className="py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase bg-gradient-to-r ${GAMIFIED_TOPICS[log.topic].color} text-white shadow-sm`}>
+                        {log.topic}
+                      </span>
                     </td>
-                    <td style={{padding: '15px 10px'}}>
+                    <td className="py-3">
                       {log.isCorrect 
-                        ? <span style={{background: '#e0fbf1', color: '#00b894', padding: '5px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold'}}>ĐÚNG</span>
-                        : <span style={{background: '#ffeaa7', color: '#d63031', padding: '5px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold'}}>SAI</span>
+                        ? <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-md text-[10px] font-black border border-emerald-500/20">ĐÚNG</span>
+                        : <span className="bg-rose-500/20 text-rose-400 px-2 py-1 rounded-md text-[10px] font-black border border-rose-500/20">SAI</span>
                       }
                     </td>
-                    <td style={{padding: '15px 10px', fontWeight: 'bold', color: '#2d3436'}}>{(log.pL_after * 100).toFixed(1)}%</td>
+                    <td className="py-3 font-bold text-white">{(log.pL_after * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

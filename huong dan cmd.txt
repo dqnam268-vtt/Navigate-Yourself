@@ -4,6 +4,8 @@ npm start
 npm install
 http://localhost:3000/
 
+node createUsers.js
+
 git add .
 git commit -m
 
