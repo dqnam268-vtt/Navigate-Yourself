@@ -159,7 +159,7 @@ function App() {
   // ADMIN States
   const [allStudentsData, setAllStudentsData] = useState([]);
   const [viewingStudent, setViewingStudent] = useState("");
-  const [sortCriterion, setSortCriterion] = useState("Average"); 
+  const [sortCriterion, setSortCriterion] = useState("Average"); // Lọc theo Điểm Trung Bình hoặc Từng Chủ đề
 
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
@@ -381,53 +381,10 @@ function App() {
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
-  const exportAllStudentsToExcel = async () => {
-    try {
-      const snapshot = await getDocs(collection(db, "learning_logs"));
-      if (snapshot.empty) {
-        alert("Chưa có dữ liệu nào trên hệ thống để xuất!");
-        return;
-      }
-
-      let rawLogs = snapshot.docs.map(doc => doc.data());
-      
-      // Sort by student email, then by timestamp
-      rawLogs.sort((a, b) => {
-        if (a.student < b.student) return -1;
-        if (a.student > b.student) return 1;
-        const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
-        const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
-        return timeA - timeB;
-      });
-
-      const exportData = rawLogs.map((log, index) => ({
-        "STT Tổng": index + 1,
-        "Email Học Viên": log.student,
-        "Chủ đề": log.topic,
-        "Cấp độ": log.level,
-        "Mã Câu Hỏi": log.questionId,
-        "Kết Quả": log.isCorrect ? "ĐÚNG" : "SAI",
-        "P(L) Trước": parseFloat((log.pL_before * 100).toFixed(2)) + "%",
-        "P(L) Sau": parseFloat((log.pL_after * 100).toFixed(2)) + "%",
-        "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(exportData);
-      worksheet['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "TatCaHocSinh");
-      XLSX.writeFile(workbook, `BKT_Data_Toan_Bo_Hoc_Sinh.xlsx`);
-      
-    } catch (error) {
-      console.error("Lỗi xuất dữ liệu tổng: ", error);
-      alert("❌ Có lỗi xảy ra khi tải dữ liệu!");
-    }
-  };
-
-  // Logic Sắp xếp Học sinh (Dành cho Admin)
+  // Logic Sắp xếp Học sinh
   const sortedStudents = [...allStudentsData].sort((a, b) => {
     if (sortCriterion === "Average") {
-      return b.average - a.average; 
+      return b.average - a.average; // Giảm dần
     } else {
       const scoreA = a.mastery[sortCriterion] || 0.3;
       const scoreB = b.mastery[sortCriterion] || 0.3;
@@ -537,15 +494,12 @@ function App() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-emerald-500/20">
-              <button onClick={exportAllStudentsToExcel} className="flex-1 py-2.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold hover:bg-indigo-500/30 transition-colors shadow-lg">
-                📊 Xuất Excel (TẤT CẢ HỌC SINH)
-              </button>
+            <div className="flex gap-3 pt-4 border-t border-emerald-500/20">
               <button onClick={handleDeleteStudentData} disabled={!viewingStudent} className="flex-1 py-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold hover:bg-rose-500/20 transition-colors disabled:opacity-50">
-                🗑️ Xóa học sinh chọn
+                🗑️ Xóa dữ liệu học sinh đang chọn
               </button>
               <button onClick={handleDeleteAllData} className="flex-1 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 transition-colors">
-                🚨 Reset tất cả
+                🚨 Reset hệ thống (Xóa tất cả)
               </button>
             </div>
           </div>
@@ -555,8 +509,10 @@ function App() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-md shadow-2xl relative overflow-hidden">
           {currentQuestion ? (
             <>
+              {/* Background Glow */}
               <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${activeTopicInfo.color} opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none`} />
               
+              {/* Top Badges */}
               <div className="flex justify-between items-start mb-6 relative z-10">
                 <div className="flex flex-col gap-2">
                   <div className={`inline-flex items-center gap-2 bg-gradient-to-r ${activeTopicInfo.color} px-3 py-1 rounded-full shadow-lg`}>
@@ -568,15 +524,18 @@ function App() {
                   </span>
                 </div>
                 
+                {/* Visual BKT Meter */}
                 <div className="bg-black/20 p-2 rounded-xl border border-white/5">
                   <KnowledgeMeter p={mastery[currentQuestion.topic]} />
                 </div>
               </div>
               
+              {/* Question */}
               <h3 className="text-white font-bold text-xl md:text-2xl leading-relaxed mb-8 relative z-10">
                 {currentQuestion.content}
               </h3>
               
+              {/* Options */}
               <div className="flex flex-col gap-3 relative z-10">
                 {currentQuestion.options.map((opt, i) => {
                   let state = "idle";
@@ -600,6 +559,7 @@ function App() {
                 })}
               </div>
 
+              {/* Feedback & Explanation */}
               {isWaitingNext && (
                 <div className={`mt-6 rounded-2xl p-5 border shadow-xl animate-in fade-in slide-in-from-bottom-4 relative z-10 ${
                   isCorrectAnswer ? "bg-emerald-500/10 border-emerald-500/30" : "bg-rose-500/10 border-rose-500/30"
@@ -672,7 +632,7 @@ function App() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm mb-10">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-white font-black text-sm uppercase tracking-widest">📝 Lịch sử tương tác</h3>
-            <Btn3D color="gray" size="sm" onClick={exportToExcel}>📥 Xuất Excel Cá Nhân</Btn3D>
+            <Btn3D color="gray" size="sm" onClick={exportToExcel}>📥 Xuất Excel</Btn3D>
           </div>
           <div className="custom-scrollbar max-h-[300px] overflow-y-auto pr-2">
             <table className="w-full text-left text-sm">
