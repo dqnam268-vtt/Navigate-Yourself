@@ -15,7 +15,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import * as XLSX from 'xlsx';
 
 // ─── TÀI KHOẢN QUẢN TRỊ VIÊN (Giáo viên) ────────────────────────────────────────
-const ADMIN_EMAIL = "admin@edu.vn";
+const ADMIN_EMAIL = "admin@vtt.edu.vn";
 
 // ─── GAMIFIED CONSTANTS ─────────────────────────────────────────────────────────
 const TOPICS = [
@@ -159,7 +159,7 @@ function App() {
   // ADMIN States
   const [allStudentsData, setAllStudentsData] = useState([]);
   const [viewingStudent, setViewingStudent] = useState("");
-  const [sortCriterion, setSortCriterion] = useState("Average"); // Lọc theo Điểm Trung Bình hoặc Từng Chủ đề
+  const [sortCriterion, setSortCriterion] = useState("Average"); 
 
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
@@ -381,13 +381,9 @@ function App() {
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
-
-// --- HÀM MỚI: XUẤT EXCEL TOÀN BỘ HỌC SINH ---
   const exportAllStudentsToExcel = async () => {
     try {
-      // 1. Lấy toàn bộ lịch sử của tất cả học sinh
       const snapshot = await getDocs(collection(db, "learning_logs"));
-      
       if (snapshot.empty) {
         alert("Chưa có dữ liệu nào trên hệ thống để xuất!");
         return;
@@ -395,17 +391,15 @@ function App() {
 
       let rawLogs = snapshot.docs.map(doc => doc.data());
       
-      // 2. Sắp xếp: Ưu tiên gom theo Email học sinh -> Sau đó xếp theo Thời gian làm bài
+      // Sort by student email, then by timestamp
       rawLogs.sort((a, b) => {
         if (a.student < b.student) return -1;
         if (a.student > b.student) return 1;
-        // Nếu cùng 1 học sinh, xếp theo thời gian (từ cũ đến mới)
         const timeA = a.timestamp ? a.timestamp.toMillis() : 0;
         const timeB = b.timestamp ? b.timestamp.toMillis() : 0;
         return timeA - timeB;
       });
 
-      // 3. Định dạng lại dữ liệu cho đẹp
       const exportData = rawLogs.map((log, index) => ({
         "STT Tổng": index + 1,
         "Email Học Viên": log.student,
@@ -418,7 +412,6 @@ function App() {
         "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
       }));
 
-      // 4. Tạo file và tải xuống
       const worksheet = XLSX.utils.json_to_sheet(exportData);
       worksheet['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
       const workbook = XLSX.utils.book_new();
@@ -430,10 +423,11 @@ function App() {
       alert("❌ Có lỗi xảy ra khi tải dữ liệu!");
     }
   };
-  // Logic Sắp xếp Học sinh
+
+  // Logic Sắp xếp Học sinh (Dành cho Admin)
   const sortedStudents = [...allStudentsData].sort((a, b) => {
     if (sortCriterion === "Average") {
-      return b.average - a.average; // Giảm dần
+      return b.average - a.average; 
     } else {
       const scoreA = a.mastery[sortCriterion] || 0.3;
       const scoreB = b.mastery[sortCriterion] || 0.3;
@@ -543,7 +537,6 @@ function App() {
               </div>
             </div>
 
-            {/* CỤM NÚT CÔNG CỤ CỦA ADMIN */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-emerald-500/20">
               <button onClick={exportAllStudentsToExcel} className="flex-1 py-2.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-bold hover:bg-indigo-500/30 transition-colors shadow-lg">
                 📊 Xuất Excel (TẤT CẢ HỌC SINH)
@@ -562,10 +555,8 @@ function App() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-md shadow-2xl relative overflow-hidden">
           {currentQuestion ? (
             <>
-              {/* Background Glow */}
               <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${activeTopicInfo.color} opacity-10 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none`} />
               
-              {/* Top Badges */}
               <div className="flex justify-between items-start mb-6 relative z-10">
                 <div className="flex flex-col gap-2">
                   <div className={`inline-flex items-center gap-2 bg-gradient-to-r ${activeTopicInfo.color} px-3 py-1 rounded-full shadow-lg`}>
@@ -577,18 +568,15 @@ function App() {
                   </span>
                 </div>
                 
-                {/* Visual BKT Meter */}
                 <div className="bg-black/20 p-2 rounded-xl border border-white/5">
                   <KnowledgeMeter p={mastery[currentQuestion.topic]} />
                 </div>
               </div>
               
-              {/* Question */}
               <h3 className="text-white font-bold text-xl md:text-2xl leading-relaxed mb-8 relative z-10">
                 {currentQuestion.content}
               </h3>
               
-              {/* Options */}
               <div className="flex flex-col gap-3 relative z-10">
                 {currentQuestion.options.map((opt, i) => {
                   let state = "idle";
@@ -612,7 +600,6 @@ function App() {
                 })}
               </div>
 
-              {/* Feedback & Explanation */}
               {isWaitingNext && (
                 <div className={`mt-6 rounded-2xl p-5 border shadow-xl animate-in fade-in slide-in-from-bottom-4 relative z-10 ${
                   isCorrectAnswer ? "bg-emerald-500/10 border-emerald-500/30" : "bg-rose-500/10 border-rose-500/30"
@@ -685,7 +672,7 @@ function App() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm mb-10">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-white font-black text-sm uppercase tracking-widest">📝 Lịch sử tương tác</h3>
-            <Btn3D color="gray" size="sm" onClick={exportToExcel}>📥 Xuất Excel</Btn3D>
+            <Btn3D color="gray" size="sm" onClick={exportToExcel}>📥 Xuất Excel Cá Nhân</Btn3D>
           </div>
           <div className="custom-scrollbar max-h-[300px] overflow-y-auto pr-2">
             <table className="w-full text-left text-sm">
