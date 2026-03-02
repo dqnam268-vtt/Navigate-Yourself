@@ -352,7 +352,7 @@ function App() {
         onClick={handleAdminUpload} 
         style={{ marginTop: '40px', padding: '10px 20px', background: '#e74c3c', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(231,76,60,0.3)' }}
       >
-        Admin: Nạp 500 câu hỏi
+        Admin: Nạp 500 câu hỏi      
       </button>
       
     </div>
