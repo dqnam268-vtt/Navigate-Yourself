@@ -14,9 +14,6 @@ import { explanations } from './data/explanations';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 
-// ─── TÀI KHOẢN QUẢN TRỊ VIÊN (Giáo viên) ────────────────────────────────────────
-const ADMIN_EMAIL = "admin@vtt.edu.vn";
-
 // ─── GAMIFIED CONSTANTS ─────────────────────────────────────────────────────────
 const TOPICS = [
   "Relative clause", 
@@ -152,14 +149,12 @@ function App() {
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
   const [isWaitingNext, setIsWaitingNext] = useState(false);
 
-  // Gamification states
+  // Gamification states (Local session)
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionStreak, setSessionStreak] = useState(0);
 
-  // ADMIN States
-  const [allStudentsData, setAllStudentsData] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
   const [viewingStudent, setViewingStudent] = useState("");
-  const [sortCriterion, setSortCriterion] = useState("Average"); // Lọc theo Điểm Trung Bình hoặc Từng Chủ đề
 
   const [mastery, setMastery] = useState(
     TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {})
@@ -168,31 +163,18 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [interactionLogs, setInteractionLogs] = useState([]);
 
-  // Fetch dữ liệu quản lý (Chỉ dành cho Admin)
   useEffect(() => {
     if (user) {
-      if (user.email === ADMIN_EMAIL) {
-        const fetchAllMastery = async () => {
-          const snap = await getDocs(collection(db, "mastery"));
-          const data = snap.docs.map(doc => {
-            const masteryData = doc.data();
-            let sum = 0;
-            TOPICS.forEach(t => sum += (masteryData[t] || 0.3));
-            const avg = sum / TOPICS.length;
-            return { email: doc.id, mastery: masteryData, average: avg };
-          });
-          setAllStudentsData(data);
-          if (data.length > 0) setViewingStudent(data[0].email);
-        };
-        fetchAllMastery();
-      } else {
-        // Học sinh thường thì chỉ xem được của chính mình
-        setViewingStudent(user.email);
-      }
+      setViewingStudent(user.email);
+      const fetchStudents = async () => {
+        const snap = await getDocs(collection(db, "mastery"));
+        const studentEmails = snap.docs.map(doc => doc.id);
+        setAllStudents(studentEmails);
+      };
+      fetchStudents();
     }
   }, [user]);
 
-  // Lấy lịch sử Logs của người đang được xem
   useEffect(() => {
     if (!viewingStudent) return;
     const q = query(
@@ -220,7 +202,6 @@ function App() {
     return () => unsubscribe();
   }, [viewingStudent]);
 
-  // Lấy mastery của bản thân để làm bài
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -256,12 +237,14 @@ function App() {
     setIsCorrectAnswer(isCorrect);
     setIsWaitingNext(true);
 
+    // BKT Update
     const topic = currentQuestion.topic;
     const pL_prev = mastery[topic] || 0.3;
     const pL_new = updateBKT(pL_prev, isCorrect);
     const newMastery = { ...mastery, [topic]: pL_new };
     setMastery(newMastery);
 
+    // Gamification Update
     if (isCorrect) {
       const diffMultiplier = currentQuestion.level === "Applying" || currentQuestion.level === "Analyzing" ? 15 : 10;
       const streakBonus = sessionStreak >= 3 ? 5 : 0;
@@ -271,6 +254,7 @@ function App() {
       setSessionStreak(0);
     }
 
+    // Save to Firebase
     try {
       await Promise.all([
         setDoc(doc(db, "mastery", user.email), newMastery, { merge: true }),
@@ -302,7 +286,7 @@ function App() {
     });
   };
 
-  // --- ADMIN FUNCTIONS ---
+  // --- ADMIN & TEACHER FUNCTIONS ---
   const handleAdminUpload = () => {
     const adminPassword = window.prompt("🔒 BẢO MẬT ADMIN: Nhập mật khẩu nạp dữ liệu:");
     if (adminPassword !== "namy241222") {
@@ -328,12 +312,11 @@ function App() {
       await Promise.all(snapshot.docs.map(document => deleteDoc(doc(db, "learning_logs", document.id))));
 
       alert(`✅ Đã xóa sạch dữ liệu của ${viewingStudent}`);
-      
-      const newData = allStudentsData.filter(s => s.email !== viewingStudent);
-      setAllStudentsData(newData);
-      if (newData.length > 0) setViewingStudent(newData[0].email);
-      else setViewingStudent("");
-
+      setAllStudents(prev => prev.filter(email => email !== viewingStudent));
+      if (viewingStudent === user.email) {
+        setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
+        setInteractionLogs([]); setChartData([]); setSessionXP(0); setSessionStreak(0);
+      } else setViewingStudent(user.email);
     } catch (err) { alert("❌ Có lỗi xảy ra!"); }
   };
 
@@ -354,8 +337,7 @@ function App() {
       ]);
 
       alert("🎉 Đã dọn dẹp sạch sẽ toàn bộ dữ liệu hệ thống!");
-      setAllStudentsData([]); 
-      setViewingStudent("");
+      setAllStudents([user.email]); setViewingStudent(user.email);
       setMastery(TOPICS.reduce((acc, topic) => ({ ...acc, [topic]: 0.3 }), {}));
       setInteractionLogs([]); setChartData([]); setSessionXP(0); setSessionStreak(0);
     } catch (err) { alert("❌ Có lỗi xảy ra!"); }
@@ -381,17 +363,6 @@ function App() {
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
   };
 
-  // Logic Sắp xếp Học sinh
-  const sortedStudents = [...allStudentsData].sort((a, b) => {
-    if (sortCriterion === "Average") {
-      return b.average - a.average; // Giảm dần
-    } else {
-      const scoreA = a.mastery[sortCriterion] || 0.3;
-      const scoreB = b.mastery[sortCriterion] || 0.3;
-      return scoreB - scoreA;
-    }
-  });
-
   // ─── LOGIN SCREEN ───────────────────────────────────────────────────────────────
   if (!user) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex justify-center items-center p-4 font-sans">
@@ -406,11 +377,11 @@ function App() {
         <input type="password" placeholder="Mật khẩu" onChange={e => setPassword(e.target.value)} className="w-full p-4 mb-6 rounded-xl bg-black/20 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all" />
         
         <Btn3D color="indigo" size="lg" className="w-full mb-8" onClick={() => signInWithEmailAndPassword(auth, email, password)}>
-          Đăng nhập hệ thống 🚀
+          Bắt đầu học ngay 🚀
         </Btn3D>
         
         <div className="pt-6 border-t border-white/10">
-          <p className="text-[11px] text-white/30 uppercase tracking-widest mb-3 font-bold">Khu vực Admin</p>
+          <p className="text-[11px] text-white/30 uppercase tracking-widest mb-3 font-bold">Khu vực Giáo viên</p>
           <button onClick={handleAdminUpload} className="px-4 py-2 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-xs font-bold hover:bg-yellow-500/20 transition-colors">
             ⚙️ Nạp 500 câu ngân hàng
           </button>
@@ -450,60 +421,29 @@ function App() {
           <XPBar xp={sessionXP} level={level} />
         </div>
 
-        {/* 2. CHỈ HIỂN THỊ TEACHER DASHBOARD NẾU LÀ ADMIN */}
-        {user.email === ADMIN_EMAIL && (
-          <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-3xl p-5 backdrop-blur-sm">
-            <span className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-4 block">👨‍🏫 BẢNG ĐIỀU KHIỂN & XẾP HẠNG (ADMIN)</span>
-            
-            <div className="flex flex-col md:flex-row gap-4 mb-5">
-              <div className="flex-1">
-                <label className="text-[11px] text-emerald-400/70 font-bold mb-2 block uppercase tracking-wider">Tiêu chí Xếp hạng:</label>
-                <select 
-                  value={sortCriterion} 
-                  onChange={(e) => setSortCriterion(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-black/40 border border-emerald-500/30 text-emerald-300 font-bold outline-none text-sm cursor-pointer focus:border-emerald-400"
-                >
-                  <option value="Average">🌟 Điểm Trung Bình Tất Cả</option>
-                  {TOPICS.map(t => <option key={t} value={t}>📘 Bảng hạng: {t}</option>)}
-                </select>
-              </div>
-              
-              <div className="flex-1">
-                <label className="text-[11px] text-emerald-400/70 font-bold mb-2 block uppercase tracking-wider">Chọn học sinh để xem chi tiết:</label>
-                <select 
-                  value={viewingStudent} 
-                  onChange={(e) => setViewingStudent(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-black/40 border border-emerald-500/30 text-white outline-none text-sm cursor-pointer focus:border-emerald-400"
-                >
-                  <option value="" disabled>-- Chọn học sinh --</option>
-                  {sortedStudents.map((s, index) => {
-                    const score = sortCriterion === "Average" ? pct(s.average) : pct(s.mastery[sortCriterion] || 0.3);
-                    const rank = index + 1;
-                    let rankIcon = "🎓";
-                    if (rank === 1) rankIcon = "🥇";
-                    else if (rank === 2) rankIcon = "🥈";
-                    else if (rank === 3) rankIcon = "🥉";
-
-                    return (
-                      <option key={s.email} value={s.email} className="bg-slate-800">
-                        Top {rank} {rankIcon} - {s.email} (Điểm: {score}%)
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4 border-t border-emerald-500/20">
-              <button onClick={handleDeleteStudentData} disabled={!viewingStudent} className="flex-1 py-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold hover:bg-rose-500/20 transition-colors disabled:opacity-50">
-                🗑️ Xóa dữ liệu học sinh đang chọn
-              </button>
-              <button onClick={handleDeleteAllData} className="flex-1 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 transition-colors">
-                🚨 Reset hệ thống (Xóa tất cả)
-              </button>
-            </div>
+        {/* 2. TEACHER DASHBOARD */}
+        <div className="bg-emerald-950/30 border border-emerald-500/20 rounded-3xl p-5 backdrop-blur-sm">
+          <span className="text-xs font-black text-emerald-400 uppercase tracking-widest mb-3 block">👨‍🏫 Bảng điều khiển Giáo viên</span>
+          <select 
+            value={viewingStudent} 
+            onChange={(e) => setViewingStudent(e.target.value)}
+            className="w-full p-3 rounded-xl bg-black/20 border border-emerald-500/30 text-white outline-none mb-3 text-sm cursor-pointer focus:border-emerald-400"
+          >
+            {allStudents.map(email => (
+              <option key={email} value={email} className="bg-slate-800">
+                {email === user.email ? `${email} (Đang xem)` : email}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-3">
+            <button onClick={handleDeleteStudentData} disabled={!viewingStudent} className="flex-1 py-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold hover:bg-rose-500/20 transition-colors disabled:opacity-50">
+              🗑️ Xóa học sinh này
+            </button>
+            <button onClick={handleDeleteAllData} className="flex-1 py-2 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-bold hover:bg-red-500/30 transition-colors">
+              🚨 Xóa toàn bộ
+            </button>
           </div>
-        )}
+        </div>
 
         {/* 3. QUESTION CARD (CORE BKT) */}
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-md shadow-2xl relative overflow-hidden">
@@ -601,7 +541,7 @@ function App() {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
           <div onClick={() => setShowChart(!showChart)} className="flex justify-between items-center cursor-pointer mb-6 group">
             <h3 className="text-white font-black text-sm uppercase tracking-widest flex items-center gap-2">
-              📊 Đồ thị làm chủ kiến thức {user.email === ADMIN_EMAIL && <span className="text-emerald-400 lowercase normal-case ml-2">(Của: {viewingStudent})</span>}
+              📊 Đồ thị làm chủ kiến thức
             </h3>
             <span className="text-xs font-bold text-white/30 bg-white/5 px-3 py-1 rounded-full group-hover:bg-white/10 transition-colors">
               {showChart ? '▲ Thu gọn' : '▼ Mở rộng'}
