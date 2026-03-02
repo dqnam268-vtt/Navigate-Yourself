@@ -15,7 +15,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import * as XLSX from 'xlsx';
 
 // ─── CẤU HÌNH HỆ THỐNG ─────────────────────────────────────────────────────────
-const ADMIN_EMAIL = "admin@vtt.edu.vn";
+const ADMIN_EMAIL = "admin@edu.vn";
 
 const TOPICS = [
   "Relative clause", 
@@ -48,6 +48,9 @@ function App() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
   const [isWaitingNext, setIsWaitingNext] = useState(false);
+  
+  // State tính thời gian làm bài
+  const [questionStartTime, setQuestionStartTime] = useState(null);
 
   // ADMIN States
   const [allStudentsData, setAllStudentsData] = useState([]);
@@ -133,6 +136,7 @@ function App() {
           ...nextQ,
           explanation: explanations[nextQ.id] || "Đang cập nhật lời giải thích."
         });
+        setQuestionStartTime(Date.now()); // Bắt đầu đếm giờ
       } else {
         setUser(null);
       }
@@ -143,6 +147,10 @@ function App() {
   const handleAnswer = async (opt) => {
     if (!currentQuestion || !user || isWaitingNext) return;
     
+    // Tính toán thời gian làm bài (giây)
+    const endTime = Date.now();
+    const durationInSeconds = Math.max(1, Math.round((endTime - questionStartTime) / 1000));
+
     const isCorrect = opt.startsWith(currentQuestion.answer.charAt(0)); 
     setSelectedOption(opt);
     setIsCorrectAnswer(isCorrect);
@@ -165,6 +173,7 @@ function App() {
           isCorrect: isCorrect,
           pL_before: pL_prev,
           pL_after: pL_new,
+          duration: durationInSeconds, // Lưu thời gian vào DB
           timestamp: serverTimestamp()
         })
       ]);
@@ -183,6 +192,7 @@ function App() {
       ...nextQ,
       explanation: explanations[nextQ.id] || "Đang cập nhật lời giải thích."
     });
+    setQuestionStartTime(Date.now()); // Bắt đầu bấm giờ lại cho câu mới
   };
 
   // --- ADMIN FUNCTIONS ---
@@ -253,12 +263,13 @@ function App() {
       "Cấp độ": log.level,
       "Mã Câu Hỏi": log.questionId,
       "Kết Quả": log.isCorrect ? "ĐÚNG" : "SAI",
+      "Thời Gian Làm (giây)": log.duration || 0,
       "P(L) Trước": parseFloat((log.pL_before * 100).toFixed(2)) + "%",
       "P(L) Sau": parseFloat((log.pL_after * 100).toFixed(2)) + "%",
-      "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
+      "Ghi Nhận Lúc": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportData);
-    worksheet['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
+    worksheet['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "LichSuBKT");
     XLSX.writeFile(workbook, `BKT_Logs_${viewingStudent.split('@')[0]}.xlsx`);
@@ -289,13 +300,14 @@ function App() {
         "Cấp độ": log.level,
         "Mã Câu Hỏi": log.questionId,
         "Kết Quả": log.isCorrect ? "ĐÚNG" : "SAI",
+        "Thời Gian Làm (giây)": log.duration || 0,
         "P(L) Trước": parseFloat((log.pL_before * 100).toFixed(2)) + "%",
         "P(L) Sau": parseFloat((log.pL_after * 100).toFixed(2)) + "%",
-        "Thời Gian": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
+        "Ghi Nhận Lúc": log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : "N/A"
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(exportData);
-      worksheet['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
+      worksheet['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "TatCaHocSinh");
       XLSX.writeFile(workbook, `BKT_Data_Toan_Bo_Hoc_Sinh.xlsx`);
@@ -321,7 +333,7 @@ function App() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'Arial, sans-serif', paddingTop: '8vh' }}>
       
       <h1 style={{ color: '#374151', fontSize: '26px', marginBottom: '10px', fontWeight: 'bold' }}>
-        Navigate Yourself
+        Navigate Yourself: Linguistics BKT
       </h1>
       <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '30px' }}>
         Vui lòng sử dụng tài khoản được giáo viên cung cấp
@@ -352,7 +364,7 @@ function App() {
         onClick={handleAdminUpload} 
         style={{ marginTop: '40px', padding: '10px 20px', background: '#e74c3c', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 5px rgba(231,76,60,0.3)' }}
       >
-        Admin: Nạp 500 câu hỏi      
+        Admin: Nạp 500 câu hỏi (Cập nhật Cloud)
       </button>
       
     </div>
@@ -500,8 +512,10 @@ function App() {
               <thead style={{ position: 'sticky', top: 0, background: '#f9fafb' }}>
                 <tr>
                   <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>Câu</th>
+                  <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>Thời gian (s)</th>
                   <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>Chủ đề</th>
                   <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>Kết quả</th>
+                  <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>P(L) Trước</th>
                   <th style={{padding: '12px', borderBottom: '1px solid #e5e7eb', color: '#4b5563'}}>P(L) Sau</th>
                 </tr>
               </thead>
@@ -509,10 +523,12 @@ function App() {
                 {interactionLogs.map((log, i) => (
                   <tr key={log.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{padding: '12px', color: '#6b7280'}}>#{interactionLogs.length - i}</td>
+                    <td style={{padding: '12px', color: '#3b82f6', fontWeight: 'bold'}}>{log.duration ? `${log.duration}s` : '-'}</td>
                     <td style={{padding: '12px', color: '#374151'}}>{log.topic}</td>
                     <td style={{padding: '12px', color: log.isCorrect ? '#059669' : '#dc2626', fontWeight: 'bold'}}>
                       {log.isCorrect ? 'ĐÚNG' : 'SAI'}
                     </td>
+                    <td style={{padding: '12px', color: '#6b7280'}}>{(log.pL_before * 100).toFixed(1)}%</td>
                     <td style={{padding: '12px', fontWeight: 'bold', color: '#1f2937'}}>{(log.pL_after * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
