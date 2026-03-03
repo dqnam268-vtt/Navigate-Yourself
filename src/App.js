@@ -328,7 +328,7 @@ function App() {
     }
   });
 
-  // ─── LOGIN SCREEN (CHUẨN GIAO DIỆN HÌNH ẢNH) ──────────────────────────────────
+  // ─── LOGIN SCREEN ──────────────────────────────────
   if (!user) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'Arial, sans-serif', paddingTop: '8vh' }}>
       
@@ -366,11 +366,16 @@ function App() {
       >
         Admin: Nạp 500 câu hỏi (Cập nhật Cloud)
       </button>
+
+      {/* CHỮ KÝ Ở LOGIN */}
+      <div style={{ marginTop: 'auto', paddingTop: '40px', paddingBottom: '20px', color: '#9ca3af', fontSize: '14px', textAlign: 'center' }}>
+        Made with <span style={{ color: '#e74c3c' }}>❤️</span> by <strong>NamY</strong>
+      </div>
       
     </div>
   );
 
-  // ─── MAIN QUIZ APP (GIAO DIỆN HỌC THUẬT SẠCH SẼ) ─────────────────────────────
+  // ─── MAIN QUIZ APP ─────────────────────────────
   return (
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       
@@ -535,6 +540,11 @@ function App() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* CHỮ KÝ Ở MÀN HÌNH CHÍNH */}
+        <div style={{ textAlign: 'center', paddingBottom: '30px', color: '#9ca3af', fontSize: '14px' }}>
+          Made with <span style={{ color: '#e74c3c' }}>❤️</span> by <strong>NamY</strong>
         </div>
 
       </div>
