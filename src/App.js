@@ -333,7 +333,7 @@ function App() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'Arial, sans-serif', paddingTop: '8vh' }}>
       
       <h1 style={{ color: '#374151', fontSize: '26px', marginBottom: '10px', fontWeight: 'bold' }}>
-        Navigate Yourself: Linguistics BKT
+        Navigate Yourself
       </h1>
       <p style={{ color: '#6b7280', fontSize: '15px', marginBottom: '30px' }}>
         Vui lòng sử dụng tài khoản được giáo viên cung cấp
